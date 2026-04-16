@@ -1,0 +1,34 @@
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Go
+api/bin/
+api/tmp/
+*.exe
+*.test
+*.out
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Node
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+web/*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,35 @@
+-- name: UpsertIssue :exec
+INSERT INTO issues (github_id, repo_id, number, title, url, labels, is_open,
+                    created_at_github, updated_at_github, last_seen_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(github_id) DO UPDATE SET
+    title             = excluded.title,
+    labels            = excluded.labels,
+    is_open           = excluded.is_open,
+    updated_at_github = excluded.updated_at_github,
+    last_seen_at      = excluded.last_seen_at;
+
+-- name: MarkIssuesClosed :exec
+UPDATE issues
+SET is_open = 0
+WHERE repo_id = ?
+  AND is_open = 1
+  AND github_id NOT IN (sqlc.slice('open_github_ids'));
+
+-- name: GetOpenIssuesForUser :many
+SELECT i.*
+FROM issues i
+JOIN repos r ON r.id = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.updated_at_github DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: CountOpenIssuesForUser :one
+SELECT COUNT(*) FROM issues i
+JOIN repos r ON r.id = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1;
