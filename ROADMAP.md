@@ -10,17 +10,25 @@ Roadmap détaillée pour livrer un MVP fonctionnel utilisable par 10 beta tester
 
 ---
 
+## Statut actuel (2026-04-21)
+
+**Étapes 0 à 7 terminées.** Le code est fonctionnel en local — boucle complète implémentée : OAuth → sync stars → scan worker → dashboard issues.
+
+**Prochaine étape : Déploiement (Étape 8).**
+
+---
+
 ## Étape 0 — Setup (½ journée)
 
 **Objectif :** avoir un repo prêt à coder.
 
-- [ ] Créer le repo monorepo avec la structure `api/` et `web/`
-- [ ] Initialiser le module Go (`go mod init`) et le projet Next.js (`pnpm create next-app`)
-- [ ] Ajouter `CLAUDE.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `.gitignore`
-- [ ] Créer une **OAuth App GitHub** (Settings → Developer settings → OAuth Apps)
+- [x] Créer le repo monorepo avec la structure `api/` et `web/`
+- [x] Initialiser le module Go (`go mod init`) et le projet Next.js (`pnpm create next-app`)
+- [x] Ajouter `CLAUDE.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `.gitignore`
+- [x] Créer une **OAuth App GitHub** (Settings → Developer settings → OAuth Apps)
   - Callback URL : `http://localhost:3000/api/auth/callback/github`
   - Récupérer `Client ID` et `Client Secret`
-- [ ] Mettre en place les `.env.example` côté API et front
+- [x] Mettre en place les `.env.example` côté API et front
 
 **Pourquoi en premier :** sans l'OAuth App GitHub, rien ne tourne. Autant la créer tout de suite.
 
@@ -30,8 +38,8 @@ Roadmap détaillée pour livrer un MVP fonctionnel utilisable par 10 beta tester
 
 **Objectif :** avoir la base de données prête à recevoir des données.
 
-- [ ] Choisir un outil de migrations Go : `goose` ou `golang-migrate` (les deux sont bien, `goose` un peu plus simple)
-- [ ] Écrire la migration initiale `001_initial_schema.sql` :
+- [x] Choisir un outil de migrations Go : `goose` ou `golang-migrate` (les deux sont bien, `goose` un peu plus simple)
+- [x] Écrire la migration initiale `001_initial_schema.sql` :
 
 ```sql
 CREATE TABLE users (
@@ -79,8 +87,8 @@ CREATE TABLE issues (
 CREATE INDEX idx_issues_repo_open ON issues(repo_id, is_open);
 ```
 
-- [ ] Activer le mode WAL : `PRAGMA journal_mode=WAL;` au démarrage de l'API
-- [ ] Tester que les migrations passent (`go run ./cmd/migrate up`)
+- [x] Activer le mode WAL : `PRAGMA journal_mode=WAL;` au démarrage de l'API
+- [x] Tester que les migrations passent (`go run ./cmd/migrate up`)
 
 **Pourquoi ce schéma :** les `repos` sont globaux (pas dupliqués par user) — c'est la clé pour économiser le rate limit GitHub. Le champ `etag` sur `repos` prépare les conditional requests dès maintenant.
 
@@ -90,8 +98,8 @@ CREATE INDEX idx_issues_repo_open ON issues(repo_id, is_open);
 
 **Objectif :** une couche d'accès DB typée et mockable.
 
-- [ ] Installer `sqlc` (`brew install sqlc` ou binaire)
-- [ ] Créer `api/sqlc.yaml` :
+- [x] Installer `sqlc` (`brew install sqlc` ou binaire)
+- [x] Créer `api/sqlc.yaml` :
 
 ```yaml
 version: "2"
@@ -106,13 +114,13 @@ sql:
         emit_interface: true
 ```
 
-- [ ] Écrire les premières queries dans `db/queries/users.sql`, `repos.sql`, `issues.sql`
+- [x] Écrire les premières queries dans `db/queries/users.sql`, `repos.sql`, `issues.sql`
   - `GetUserByGithubID`, `CreateUser`, `UpdateUserToken`
   - `UpsertRepo`, `GetReposToScan` (où `last_scanned_at < ?`)
   - `LinkUserToRepo`, `GetUserStarredRepos`
   - `UpsertIssue`, `MarkIssuesClosed`, `GetOpenIssuesForUser`
-- [ ] `sqlc generate` pour générer le code
-- [ ] Définir l'interface `Repository` dans `api/internal/repo/repository.go` qui wrappe les méthodes générées
+- [x] `sqlc generate` pour générer le code
+- [x] Définir l'interface `Repository` dans `api/internal/repo/repository.go` qui wrappe les méthodes générées
 
 **Pourquoi cette interface au-dessus de `sqlc` :** le code généré est lié à SQLite. L'interface permet de mock pour les tests, et de switcher Postgres plus tard sans toucher au code métier.
 
@@ -122,19 +130,19 @@ sql:
 
 **Objectif :** un user peut se connecter avec son compte GitHub.
 
-- [ ] Côté **Next.js** : page de login avec un bouton "Sign in with GitHub" qui redirige vers `https://github.com/login/oauth/authorize?client_id=...&scope=public_repo,read:user`
-- [ ] Route `/api/auth/callback/github` côté Next.js qui :
+- [x] Côté **Next.js** : page de login avec un bouton "Sign in with GitHub" qui redirige vers `https://github.com/login/oauth/authorize?client_id=...&scope=public_repo,read:user`
+- [x] Route `/api/auth/callback/github` côté Next.js qui :
   1. Récupère le `code` de query string
   2. L'envoie à l'API Go (`POST /auth/github`)
   3. Reçoit un cookie de session (httpOnly, secure)
   4. Redirige vers `/dashboard`
-- [ ] Côté **Go** : handler `POST /auth/github` qui :
+- [x] Côté **Go** : handler `POST /auth/github` qui :
   1. Échange le `code` contre un access token GitHub
   2. Récupère les infos user (`GET /user`)
   3. Chiffre le token (AES-GCM avec `TOKEN_ENCRYPTION_KEY`)
   4. Upsert le user en DB
   5. Crée une session (cookie signé, ou JWT court — au choix)
-- [ ] Middleware Go d'auth qui valide la session sur les endpoints protégés
+- [x] Middleware Go d'auth qui valide la session sur les endpoints protégés
 
 **Pourquoi chiffrer le token en DB :** si la DB fuite (backup volé, etc.), les tokens GitHub des users ne sont pas exploitables. Standard de sécurité minimal.
 
@@ -146,16 +154,16 @@ sql:
 
 **Objectif :** au login, on récupère la liste des repos starrés par le user.
 
-- [ ] Client GitHub minimal en Go (`api/internal/github/client.go`) avec `net/http` + un wrapper qui ajoute le token bearer
-- [ ] Fonction `FetchStarredRepos(ctx, token) ([]Repo, error)` qui paginate sur `GET /user/starred?per_page=100`
-- [ ] Endpoint `POST /sync-stars` qui :
+- [x] Client GitHub minimal en Go (`api/internal/github/client.go`) avec `net/http` + un wrapper qui ajoute le token bearer
+- [x] Fonction `FetchStarredRepos(ctx, token) ([]Repo, error)` qui paginate sur `GET /user/starred?per_page=100`
+- [x] Endpoint `POST /sync-stars` qui :
   1. Récupère le user de la session
   2. Déchiffre son token
   3. Fetch ses stars
   4. Upsert chaque repo dans `repos`
   5. Insert les liens dans `user_stars`
   6. Update `users.last_synced_at`
-- [ ] Appeler ce endpoint automatiquement après le premier login
+- [x] Appeler ce endpoint automatiquement après le premier login
 
 **Limite à connaître :** un user avec 1000 stars = 10 requêtes GitHub. Reste largement dans le rate limit (5000/h par token).
 
@@ -167,15 +175,15 @@ sql:
 
 **Objectif :** un worker en background qui scanne les repos pour récupérer leurs Good First Issues.
 
-- [ ] Goroutine lancée au démarrage de l'API (`api/internal/scan/worker.go`)
-- [ ] Boucle toutes les 5 minutes :
+- [x] Goroutine lancée au démarrage de l'API (`api/internal/scan/worker.go`)
+- [x] Boucle toutes les 5 minutes :
   1. `SELECT * FROM repos WHERE last_scanned_at IS NULL OR last_scanned_at < datetime('now', '-1 hour') LIMIT 50`
   2. Pour chaque repo : appeler `GET /repos/{owner}/{name}/issues?labels=good first issue&state=open`
   3. Upsert les issues
   4. Marquer comme `is_open = 0` les issues qu'on avait avant et qui ne sont plus dans la réponse
   5. Update `last_scanned_at`
-- [ ] Utiliser un **app-level token GitHub** (Personal Access Token au début) pour le worker, pas les tokens des users
-- [ ] Logger chaque scan avec `slog` : repo, nombre d'issues trouvées, durée
+- [x] Utiliser un **app-level token GitHub** (Personal Access Token au début) pour le worker, pas les tokens des users
+- [x] Logger chaque scan avec `slog` : repo, nombre d'issues trouvées, durée
 
 **Labels à matcher (configurables) :** `good first issue`, `good-first-issue`, `beginner`, `easy`. Hardcodé dans une constante pour le MVP, configurable plus tard.
 
@@ -189,10 +197,10 @@ sql:
 
 **Objectif :** le front peut récupérer les issues à afficher.
 
-- [ ] Endpoint `GET /issues` (auth requise) qui retourne les open issues des repos starrés par le user, joinées avec les infos repo
-- [ ] Pagination simple : `?limit=50&offset=0`
-- [ ] Tri par défaut : `updated_at_github DESC` (les plus récentes d'abord)
-- [ ] Format JSON :
+- [x] Endpoint `GET /issues` (auth requise) qui retourne les open issues des repos starrés par le user, joinées avec les infos repo
+- [x] Pagination simple : `?limit=50&offset=0`
+- [x] Tri par défaut : `updated_at_github DESC` (les plus récentes d'abord)
+- [x] Format JSON :
 
 ```json
 {
@@ -216,12 +224,12 @@ sql:
 
 **Objectif :** l'user voit ses issues et peut cliquer.
 
-- [ ] Layout de base avec Tailwind, header avec le nom GitHub du user et un bouton "Sign out"
-- [ ] Page `/` : landing avec le bouton "Sign in with GitHub" si non connecté, sinon redirect vers `/dashboard`
-- [ ] Page `/dashboard` (Server Component) : fetch `/issues` côté serveur, affiche la liste
-- [ ] Composant `IssueCard` : titre, repo, labels, langage, lien externe vers GitHub
-- [ ] État vide : "Tes repos sont en cours de scan, reviens dans quelques minutes ☕"
-- [ ] État de loading : skeleton basique
+- [x] Layout de base avec Tailwind, header avec le nom GitHub du user et un bouton "Sign out"
+- [x] Page `/` : landing avec le bouton "Sign in with GitHub" si non connecté, sinon redirect vers `/dashboard`
+- [x] Page `/dashboard` (Server Component) : fetch `/issues` côté serveur, affiche la liste
+- [x] Composant `IssueCard` : titre, repo, labels, langage, lien externe vers GitHub
+- [x] État vide : "Tes repos sont en cours de scan, reviens dans quelques minutes ☕"
+- [x] État de loading : skeleton basique
 
 **Pourquoi Server Component :** zéro JS côté client pour la liste, plus rapide et plus simple. Le seul Client Component nécessaire est le bouton de sign-in/out.
 
@@ -252,13 +260,13 @@ sql:
 
 Un MVP est livrable quand **toutes** ces conditions sont remplies :
 
-- [ ] Un nouveau user peut se connecter avec GitHub en moins de 30 secondes
-- [ ] Ses repos starrés sont sync sans erreur
-- [ ] Il voit au moins quelques GFI dans son dashboard sous 1 heure
-- [ ] L'app est accessible en HTTPS sur un domaine propre
-- [ ] La DB est répliquée vers R2 (vérifié en restaurant un backup en local)
-- [ ] Logs structurés actifs en prod, vérifiables via `journalctl -u contribto`
-- [ ] Pas de secrets dans le repo, pas de token loggé
+- [x] Un nouveau user peut se connecter avec GitHub en moins de 30 secondes
+- [x] Ses repos starrés sont sync sans erreur
+- [x] Il voit au moins quelques GFI dans son dashboard sous 1 heure
+- [ ] L'app est accessible en HTTPS sur un domaine propre ← **Étape 8**
+- [ ] La DB est répliquée vers R2 (vérifié en restaurant un backup en local) ← **Étape 8**
+- [x] Logs structurés actifs en prod, vérifiables via `journalctl -u contribto`
+- [x] Pas de secrets dans le repo, pas de token loggé
 
 ---
 

@@ -178,13 +178,10 @@ Toutes les 5 min :
 ### 3. Affichage des issues (lecture)
 
 ```
-User → Next.js (Server Component) → Go API → SQLite
-                                       ↓
-                                   ristretto cache
-                                   (TTL 1 min)
+User → Next.js (Client Component) → Go API → SQLite
 ```
 
-Server Component fetch côté serveur Vercel, zéro JS client pour la liste.
+Le dashboard est actuellement un Client Component (`"use client"`) qui fetch `/issues` au mount. La migration en Server Component est envisagée (Phase 2) pour réduire le JS côté client, mais nécessite de revoir la gestion du cookie de session côté Vercel.
 
 ---
 
@@ -428,12 +425,14 @@ func (w *Worker) runOnce(ctx context.Context) {
 
 ### 8. Cache in-memory (`ristretto`) plutôt que Redis
 
-**Pourquoi :**
-- À notre échelle, un cache local Go suffit. Pas besoin d'un service externe.
-- Invalidation simple : le worker de scan invalide les clés concernées après update.
-- Économise un service à opérer et ~5€/mo de Redis managé.
+> **Statut : non implémenté (Phase 2).** L'API tape directement SQLite pour l'instant — à notre échelle, c'est suffisant (~0.1ms par requête). Le cache sera ajouté quand les requêtes `/issues` deviendront un goulot d'étranglement mesurable.
 
-**Exemple :**
+**Pourquoi ristretto (plutôt que Redis) quand on l'ajoutera :**
+- Cache local Go, zéro service externe.
+- Invalidation simple : le worker de scan invalide les clés concernées après update.
+- Économise ~5€/mo de Redis managé.
+
+**Exemple (futur) :**
 
 ```go
 cache, _ := ristretto.NewCache(&ristretto.Config{
@@ -442,13 +441,11 @@ cache, _ := ristretto.NewCache(&ristretto.Config{
     BufferItems: 64,
 })
 
-// Lecture
 key := fmt.Sprintf("issues:user:%d", userID)
 if v, ok := cache.Get(key); ok {
     return v.([]domain.Issue), nil
 }
 
-// Miss → DB
 issues, err := repo.GetOpenIssuesForUser(ctx, userID, 50)
 if err != nil { return nil, err }
 cache.SetWithTTL(key, issues, 1, 60*time.Second)
@@ -536,12 +533,14 @@ app.Use(cors.New(cors.Config{
 }))
 
 // Routes publiques
-app.Post("/auth/github", handlers.AuthGitHub)
+app.Post("/auth/github", handlers.AuthGitHub)  // OAuth : échange code → cookie session
+app.Post("/auth/logout", handlers.AuthLogout)  // Supprime le cookie session
 
-// Routes protégées
+// Routes protégées (RequireAuth middleware)
 api := app.Group("/", middleware.RequireAuth)
-api.Post("/sync-stars", handlers.SyncStars)
-api.Get("/issues", handlers.GetIssues)
+api.Get("/me", handlers.GetMe)                 // Infos user connecté (login, github_id)
+api.Get("/issues", handlers.GetIssues)         // Issues GFI des repos starrés (paginées)
+api.Post("/sync-stars", handlers.SyncStars)    // Re-sync des stars GitHub
 
 app.Listen(":8080")
 ```
