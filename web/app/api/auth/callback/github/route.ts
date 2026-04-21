@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Forward the encrypted session cookie from the Go API to the browser.
-  const response = NextResponse.redirect(new URL('/dashboard', request.url))
+  const response = NextResponse.redirect(new URL('/onboarding', request.url))
   const setCookie = apiRes.headers.get('set-cookie')
   if (setCookie) {
     response.headers.set('set-cookie', setCookie)

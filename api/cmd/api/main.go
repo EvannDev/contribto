@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"log/slog"
@@ -12,25 +13,28 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 
-	"github.com/EvannDev/hellocommit/internal/github"
-	httphandler "github.com/EvannDev/hellocommit/internal/http"
-	"github.com/EvannDev/hellocommit/internal/repo"
+	"github.com/EvannDev/contribto/internal/github"
+	httphandler "github.com/EvannDev/contribto/internal/http"
+	"github.com/EvannDev/contribto/internal/repo"
+	"github.com/EvannDev/contribto/internal/scan"
 )
 
 type config struct {
-	GithubClientID     string
-	GithubClientSecret string
-	TokenEncryptionKey string
+	GithubClientID      string
+	GithubClientSecret  string
+	GithubWorkerPAT     string
+	TokenEncryptionKey  string
 	CookieEncryptionKey string
-	FrontendOrigin     string
-	DBPath             string
-	Port               string
+	FrontendOrigin      string
+	DBPath              string
+	Port                string
 }
 
 func loadConfig() config {
 	cfg := config{
 		GithubClientID:      os.Getenv("GITHUB_CLIENT_ID"),
 		GithubClientSecret:  os.Getenv("GITHUB_CLIENT_SECRET"),
+		GithubWorkerPAT:     os.Getenv("GITHUB_WORKER_PAT"),
 		TokenEncryptionKey:  os.Getenv("TOKEN_ENCRYPTION_KEY"),
 		CookieEncryptionKey: os.Getenv("COOKIE_ENCRYPTION_KEY"),
 		FrontendOrigin:      os.Getenv("FRONTEND_ORIGIN"),
@@ -96,6 +100,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.GithubWorkerPAT != "" {
+		worker := scan.NewWorker(repository, ghClient, cfg.GithubWorkerPAT)
+		go worker.Start(context.Background())
+	} else {
+		slog.Warn("GITHUB_WORKER_PAT not set — scan worker disabled")
+	}
+
 	h := httphandler.NewHandler(repository, ghClient, encKey)
 
 	app := fiber.New(fiber.Config{ErrorHandler: jsonErrorHandler})
@@ -110,10 +121,12 @@ func main() {
 	}))
 
 	app.Post("/auth/github", h.PostAuthGitHub)
+	app.Post("/auth/logout", h.PostAuthLogout)
 
-	// Protected group — no endpoints yet, added in Step 6.
 	protected := app.Group("/", httphandler.RequireAuth())
-	_ = protected
+	protected.Get("/me", h.GetMe)
+	protected.Get("/issues", h.GetIssues)
+	protected.Post("/sync-stars", h.PostSyncStars)
 
 	slog.Info("starting", "port", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

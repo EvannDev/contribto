@@ -1,4 +1,4 @@
-# HelloCommit — Roadmap MVP
+# Contrib.to — Roadmap MVP
 
 Roadmap détaillée pour livrer un MVP fonctionnel utilisable par 10 beta testers.
 
@@ -234,12 +234,12 @@ sql:
 **Objectif :** c'est en ligne et 10 beta testers peuvent l'utiliser.
 
 - [ ] **API** : provisionner un VPS Hetzner CX22 (~4€/mo)
-  - Installer Go, créer un user dédié `hellocommit`
+  - Installer Go, créer un user dédié `contribto`
   - Build le binaire, copier via `scp`
   - Service `systemd` pour le lancer + restart auto
   - Caddy ou Nginx en reverse proxy avec HTTPS auto (Caddy plus simple)
 - [ ] **Front** : connecter le repo à Vercel, configurer les env vars
-- [ ] **DNS** : domaine pointant vers Vercel (front) et un sous-domaine `api.hellocommit.dev` vers le VPS
+- [ ] **DNS** : domaine pointant vers Vercel (front) et un sous-domaine `api.contrib.to` vers le VPS
 - [ ] **Litestream** : config pour répliquer la DB vers Cloudflare R2 (créer un bucket R2 gratuit)
 - [ ] Mettre à jour la callback URL de l'OAuth App GitHub pour la prod
 - [ ] Test bout en bout : login → sync → attendre le scan → voir les issues
@@ -257,7 +257,7 @@ Un MVP est livrable quand **toutes** ces conditions sont remplies :
 - [ ] Il voit au moins quelques GFI dans son dashboard sous 1 heure
 - [ ] L'app est accessible en HTTPS sur un domaine propre
 - [ ] La DB est répliquée vers R2 (vérifié en restaurant un backup en local)
-- [ ] Logs structurés actifs en prod, vérifiables via `journalctl -u hellocommit`
+- [ ] Logs structurés actifs en prod, vérifiables via `journalctl -u contribto`
 - [ ] Pas de secrets dans le repo, pas de token loggé
 
 ---

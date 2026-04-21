@@ -1,4 +1,4 @@
-# HelloCommit — Makefile
+# Contrib.to — Makefile
 # Run `make help` to see all available targets.
 
 DB_PATH     ?= ./app.db

@@ -1,3 +1,6 @@
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = ?;
+
 -- name: GetUserByGithubID :one
 SELECT * FROM users WHERE github_id = ?;
 

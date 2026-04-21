@@ -28,6 +28,24 @@ func (q *Queries) GetUserByGithubID(ctx context.Context, githubID int64) (User, 
 	return i, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, github_id, github_login, encrypted_token, created_at, last_synced_at FROM users WHERE id = ?
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.GithubID,
+		&i.GithubLogin,
+		&i.EncryptedToken,
+		&i.CreatedAt,
+		&i.LastSyncedAt,
+	)
+	return i, err
+}
+
 const updateUserSyncedAt = `-- name: UpdateUserSyncedAt :exec
 UPDATE users SET last_synced_at = ? WHERE id = ?
 `

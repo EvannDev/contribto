@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/EvannDev/hellocommit/db/migrations"
+	"github.com/EvannDev/contribto/db/migrations"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )

@@ -1,6 +1,6 @@
-# Architecture — HelloCommit
+# Architecture — Contrib.to
 
-Ce document explique les choix techniques de HelloCommit. Il vise à donner le **pourquoi** derrière chaque décision, pour que les futurs contributeurs (et toi dans 6 mois) puissent les remettre en question en connaissance de cause.
+Ce document explique les choix techniques de Contrib.to. Il vise à donner le **pourquoi** derrière chaque décision, pour que les futurs contributeurs (et toi dans 6 mois) puissent les remettre en question en connaissance de cause.
 
 ---
 
@@ -19,7 +19,7 @@ Ce document explique les choix techniques de HelloCommit. Il vise à donner le *
 
 ## Vue d'ensemble
 
-HelloCommit aide les développeurs à trouver des **Good First Issues** sur GitHub, en se basant sur les repos qu'ils ont starrés.
+Contrib.to aide les développeurs à trouver des **Good First Issues** sur GitHub, en se basant sur les repos qu'ils ont starrés.
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌──────────────────┐
@@ -251,10 +251,10 @@ for _, p := range pragmas {
 
 ```yaml
 dbs:
-  - path: /var/lib/hellocommit/app.db
+  - path: /var/lib/contribto/app.db
     replicas:
       - type: s3
-        bucket: hellocommit-backups
+        bucket: contribto-backups
         path: db
         endpoint: https://<account-id>.r2.cloudflarestorage.com
         region: auto
@@ -469,16 +469,16 @@ cache.SetWithTTL(key, issues, 1, 60*time.Second)
 **Service systemd type :**
 
 ```ini
-# /etc/systemd/system/hellocommit.service
+# /etc/systemd/system/contribto.service
 [Unit]
-Description=HelloCommit API
+Description=Contrib.to API
 After=network.target
 
 [Service]
-User=hellocommit
-WorkingDirectory=/var/lib/hellocommit
-ExecStart=/usr/local/bin/hellocommit
-EnvironmentFile=/etc/hellocommit/env
+User=contribto
+WorkingDirectory=/var/lib/contribto
+ExecStart=/usr/local/bin/contribto
+EnvironmentFile=/etc/contribto/env
 Restart=on-failure
 RestartSec=5s
 
@@ -489,7 +489,7 @@ WantedBy=multi-user.target
 Caddy en reverse proxy avec HTTPS auto :
 
 ```
-api.hellocommit.dev {
+api.contrib.to {
     reverse_proxy localhost:8080
 }
 ```
@@ -531,7 +531,7 @@ app := fiber.New(fiber.Config{
 app.Use(logger.New())
 app.Use(recover.New())
 app.Use(cors.New(cors.Config{
-    AllowOrigins:     []string{"https://hellocommit.vercel.app"},
+    AllowOrigins:     []string{"https://contrib.to"},
     AllowCredentials: true,
 }))
 

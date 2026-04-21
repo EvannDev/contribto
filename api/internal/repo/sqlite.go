@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	dbsqlc "github.com/EvannDev/hellocommit/db/sqlc"
-	"github.com/EvannDev/hellocommit/internal/domain"
+	dbsqlc "github.com/EvannDev/contribto/db/sqlc"
+	"github.com/EvannDev/contribto/internal/domain"
 )
 
 // SQLiteRepo implements Repository using the sqlc-generated query layer.
@@ -23,6 +23,17 @@ func NewSQLiteRepo(db *sql.DB) *SQLiteRepo {
 }
 
 // --- Users ---
+
+func (r *SQLiteRepo) GetUserByID(ctx context.Context, userID int64) (*domain.User, error) {
+	row, err := r.q.GetUserByID(ctx, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get user by id: %w", err)
+	}
+	return userFromRow(row), nil
+}
 
 func (r *SQLiteRepo) GetUserByGithubID(ctx context.Context, githubID int64) (*domain.User, error) {
 	row, err := r.q.GetUserByGithubID(ctx, githubID)
@@ -71,15 +82,17 @@ func (r *SQLiteRepo) UpdateUserSyncedAt(ctx context.Context, userID int64, t tim
 // --- Repos ---
 
 func (r *SQLiteRepo) UpsertRepo(ctx context.Context, repo *domain.Repo) error {
-	if err := r.q.UpsertRepo(ctx, dbsqlc.UpsertRepoParams{
+	id, err := r.q.UpsertRepo(ctx, dbsqlc.UpsertRepoParams{
 		GithubID:    repo.GithubID,
 		FullName:    repo.FullName,
 		Description: sql.NullString{String: repo.Description, Valid: repo.Description != ""},
 		Language:    sql.NullString{String: repo.Language, Valid: repo.Language != ""},
 		StarsCount:  sql.NullInt64{Int64: int64(repo.StarsCount), Valid: true},
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("upsert repo: %w", err)
 	}
+	repo.ID = id
 	return nil
 }
 
@@ -181,6 +194,42 @@ func (r *SQLiteRepo) GetOpenIssuesForUser(ctx context.Context, userID int64, lim
 	issues := make([]domain.Issue, len(rows))
 	for i, row := range rows {
 		issues[i] = issueFromRow(row)
+	}
+	return issues, nil
+}
+
+func (r *SQLiteRepo) GetOpenIssuesWithRepo(ctx context.Context, userID int64, limit, offset int) ([]domain.IssueWithRepo, error) {
+	rows, err := r.q.GetOpenIssuesWithRepo(ctx, dbsqlc.GetOpenIssuesWithRepoParams{
+		UserID: userID,
+		Limit:  int64(limit),
+		Offset: int64(offset),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get open issues with repo: %w", err)
+	}
+	issues := make([]domain.IssueWithRepo, len(rows))
+	for i, row := range rows {
+		issue := domain.IssueWithRepo{
+			ID:           row.ID,
+			Number:       int(row.Number),
+			Title:        row.Title,
+			URL:          row.Url,
+			Labels:       labelsFromJSON(row.Labels.String),
+			RepoFullName: row.RepoFullName,
+			RepoStars:    int(row.RepoStarsCount.Int64),
+		}
+		if row.RepoLanguage.Valid {
+			issue.RepoLanguage = row.RepoLanguage.String
+		}
+		if row.CreatedAtGithub.Valid {
+			t := row.CreatedAtGithub.Time
+			issue.CreatedAt = &t
+		}
+		if row.UpdatedAtGithub.Valid {
+			t := row.UpdatedAtGithub.Time
+			issue.UpdatedAt = &t
+		}
+		issues[i] = issue
 	}
 	return issues, nil
 }

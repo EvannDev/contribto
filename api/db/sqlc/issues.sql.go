@@ -80,6 +80,75 @@ func (q *Queries) GetOpenIssuesForUser(ctx context.Context, arg GetOpenIssuesFor
 	return items, nil
 }
 
+const getOpenIssuesWithRepo = `-- name: GetOpenIssuesWithRepo :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count AS repo_stars_count
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.updated_at_github DESC
+LIMIT ?
+OFFSET ?
+`
+
+type GetOpenIssuesWithRepoParams struct {
+	UserID int64
+	Limit  int64
+	Offset int64
+}
+
+type GetOpenIssuesWithRepoRow struct {
+	ID              int64
+	Number          int64
+	Title           string
+	Url             string
+	Labels          sql.NullString
+	CreatedAtGithub sql.NullTime
+	UpdatedAtGithub sql.NullTime
+	RepoFullName    string
+	RepoLanguage    sql.NullString
+	RepoStarsCount  sql.NullInt64
+}
+
+func (q *Queries) GetOpenIssuesWithRepo(ctx context.Context, arg GetOpenIssuesWithRepoParams) ([]GetOpenIssuesWithRepoRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOpenIssuesWithRepo, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOpenIssuesWithRepoRow
+	for rows.Next() {
+		var i GetOpenIssuesWithRepoRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Title,
+			&i.Url,
+			&i.Labels,
+			&i.CreatedAtGithub,
+			&i.UpdatedAtGithub,
+			&i.RepoFullName,
+			&i.RepoLanguage,
+			&i.RepoStarsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markIssuesClosed = `-- name: MarkIssuesClosed :exec
 UPDATE issues
 SET is_open = 0

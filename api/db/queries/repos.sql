@@ -1,11 +1,12 @@
--- name: UpsertRepo :exec
+-- name: UpsertRepo :one
 INSERT INTO repos (github_id, full_name, description, language, stars_count)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(github_id) DO UPDATE SET
     full_name   = excluded.full_name,
     description = excluded.description,
     language    = excluded.language,
-    stars_count = excluded.stars_count;
+    stars_count = excluded.stars_count
+RETURNING id;
 
 -- name: GetReposToScan :many
 SELECT r.*

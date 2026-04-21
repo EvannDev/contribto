@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/EvannDev/hellocommit/internal/domain"
+	"github.com/EvannDev/contribto/internal/domain"
 )
 
 // Repository is the single interface through which all DB access happens.
@@ -12,6 +12,7 @@ import (
 // any business logic.
 type Repository interface {
 	// Users
+	GetUserByID(ctx context.Context, userID int64) (*domain.User, error)
 	GetUserByGithubID(ctx context.Context, githubID int64) (*domain.User, error)
 	UpsertUser(ctx context.Context, u *domain.User) error
 	UpdateUserToken(ctx context.Context, userID int64, encryptedToken []byte) error
@@ -30,5 +31,6 @@ type Repository interface {
 	UpsertIssue(ctx context.Context, issue *domain.Issue) error
 	MarkIssuesClosed(ctx context.Context, repoID int64, openGithubIDs []int64) error
 	GetOpenIssuesForUser(ctx context.Context, userID int64, limit, offset int) ([]domain.Issue, error)
+	GetOpenIssuesWithRepo(ctx context.Context, userID int64, limit, offset int) ([]domain.IssueWithRepo, error)
 	CountOpenIssuesForUser(ctx context.Context, userID int64) (int, error)
 }

@@ -74,7 +74,7 @@ func (q *Queries) UpdateRepoScanned(ctx context.Context, arg UpdateRepoScannedPa
 	return err
 }
 
-const upsertRepo = `-- name: UpsertRepo :exec
+const upsertRepo = `-- name: UpsertRepo :one
 INSERT INTO repos (github_id, full_name, description, language, stars_count)
 VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(github_id) DO UPDATE SET
@@ -82,6 +82,7 @@ ON CONFLICT(github_id) DO UPDATE SET
     description = excluded.description,
     language    = excluded.language,
     stars_count = excluded.stars_count
+RETURNING id
 `
 
 type UpsertRepoParams struct {
@@ -92,13 +93,15 @@ type UpsertRepoParams struct {
 	StarsCount  sql.NullInt64
 }
 
-func (q *Queries) UpsertRepo(ctx context.Context, arg UpsertRepoParams) error {
-	_, err := q.db.ExecContext(ctx, upsertRepo,
+func (q *Queries) UpsertRepo(ctx context.Context, arg UpsertRepoParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, upsertRepo,
 		arg.GithubID,
 		arg.FullName,
 		arg.Description,
 		arg.Language,
 		arg.StarsCount,
 	)
-	return err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
