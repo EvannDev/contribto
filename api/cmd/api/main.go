@@ -6,10 +6,12 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/encryptcookie"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 
@@ -112,6 +114,13 @@ func main() {
 	app := fiber.New(fiber.Config{ErrorHandler: jsonErrorHandler})
 	app.Use(logger.New())
 	app.Use(recover.New())
+	app.Use(limiter.New(limiter.Config{
+		Max:        120,
+		Expiration: time.Minute,
+		LimitReached: func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests"})
+		},
+	}))
 	app.Use(encryptcookie.New(encryptcookie.Config{
 		Key: cfg.CookieEncryptionKey,
 	}))

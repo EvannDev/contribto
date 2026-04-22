@@ -55,7 +55,7 @@ func (h *Handler) PostAuthGitHub(c fiber.Ctx) error {
 	if err := c.Bind().Body(&dto); err != nil {
 		return fiber.NewError(http.StatusBadRequest, "invalid request body")
 	}
-	if dto.Code == "" {
+	if dto.Code == "" || len(dto.Code) > 256 {
 		return fiber.NewError(http.StatusBadRequest, "code is required")
 	}
 
@@ -92,6 +92,7 @@ func (h *Handler) PostAuthGitHub(c fiber.Ctx) error {
 		Name:     sessionCookieName,
 		Value:    strconv.FormatInt(user.ID, 10),
 		HTTPOnly: true,
+		Secure:   true,
 		SameSite: "Lax",
 		Path:     "/",
 		MaxAge:   int(7 * 24 * time.Hour / time.Second),
@@ -108,6 +109,7 @@ func (h *Handler) PostAuthLogout(c fiber.Ctx) error {
 		Value:    "",
 		MaxAge:   -1,
 		HTTPOnly: true,
+		Secure:   true,
 		SameSite: "Lax",
 		Path:     "/",
 	})
@@ -208,7 +210,7 @@ func (h *Handler) PostSyncStars(c fiber.Ctx) error {
 
 	token, err := crypto.Decrypt(h.encryptionKey, user.EncryptedToken)
 	if err != nil {
-		slog.Error("decrypt token", "userID", userID, "err", err)
+		slog.Error("decrypt token", "err", err)
 		return fiber.NewError(http.StatusInternalServerError, "internal error")
 	}
 
