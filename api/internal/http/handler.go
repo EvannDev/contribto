@@ -63,6 +63,7 @@ func (h *Handler) PostAuthGitHub(c fiber.Ctx) error {
 
 	token, err := h.gh.ExchangeCode(ctx, dto.Code)
 	if err != nil {
+		slog.Error("exchange github code", "err", err)
 		return fiber.NewError(http.StatusUnauthorized, "failed to exchange GitHub code")
 	}
 

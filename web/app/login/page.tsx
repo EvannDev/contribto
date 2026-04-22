@@ -19,8 +19,7 @@ export default function LoginPage() {
 
   function handleAuth() {
     setLoading(true)
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/github`
-    const url = `https://github.com/login/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID}&scope=read:user&redirect_uri=${encodeURIComponent(redirectUri)}`
+    const url = `https://github.com/login/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID}&scope=read:user`
     window.location.href = url
   }
 
