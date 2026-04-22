@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 interface Issue {
   id: number
@@ -59,6 +60,7 @@ export default function DashboardPage() {
   const [dark, setDark] = useState(false)
   const [notif, setNotif] = useState(true)
   const [rescanning, setRescanning] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
 
@@ -179,14 +181,22 @@ export default function DashboardPage() {
                     />
                   </div>
                   <span className="issue-count">{filtered.length} of {total} issues</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    <button className={`view-toggle${viewMode === 'list' ? ' view-toggle--active' : ''}`} onClick={() => setViewMode('list')} title="List view"><ListViewIcon /></button>
+                    <button className={`view-toggle${viewMode === 'grid' ? ' view-toggle--active' : ''}`} onClick={() => setViewMode('grid')} title="Grid view"><GridViewIcon /></button>
+                  </div>
                 </div>
                 {loading ? (
                   <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--fg-subtle)' }}>Loading…</div>
                 ) : filtered.length === 0 ? (
                   <EmptyState onReset={() => { setSearch(''); setLangFilter('All'); setRepoFilter('All') }} />
-                ) : (
+                ) : viewMode === 'list' ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {filtered.map(issue => <IssueRow key={issue.id} issue={issue} />)}
+                  </div>
+                ) : (
+                  <div className="issues-grid">
+                    {filtered.map(issue => <IssueCard key={issue.id} issue={issue} />)}
                   </div>
                 )}
               </main>
@@ -228,6 +238,8 @@ function FilterOption({ label, active, onClick, mono }: { label: string; active:
 
 function IssueRow({ issue }: { issue: Issue }) {
   const [hovered, setHovered] = useState(false)
+  const [imgErr, setImgErr] = useState(false)
+  const owner = issue.repo.full_name.slice(0, issue.repo.full_name.indexOf('/'))
   return (
     <a
       href={issue.url}
@@ -247,6 +259,7 @@ function IssueRow({ issue }: { issue: Issue }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg-default)', marginBottom: 5, lineHeight: 1.35 }}>{issue.title}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {!imgErr && <Image src={`https://github.com/${owner}.png?size=32`} alt="" width={16} height={16} className="issue-owner-avatar" onError={() => setImgErr(true)} />}
             <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11, color: 'var(--fg-muted)' }}>{issue.repo.full_name}</span>
             <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11, color: 'var(--fg-subtle)' }}>#{issue.number}</span>
             {issue.labels.map(l => {
@@ -266,6 +279,37 @@ function IssueRow({ issue }: { issue: Issue }) {
   )
 }
 
+function IssueCard({ issue }: { issue: Issue }) {
+  const [imgErr, setImgErr] = useState(false)
+  const owner = issue.repo.full_name.slice(0, issue.repo.full_name.indexOf('/'))
+  return (
+    <a href={issue.url} target="_blank" rel="noopener noreferrer" className="issue-card">
+      <div className="issue-card__header">
+        <IssueCircleIcon />
+        <span className="issue-card__title">{issue.title}</span>
+      </div>
+      <div className="issue-card__footer">
+        <div className="issue-card__repo">
+          {!imgErr && <Image src={`https://github.com/${owner}.png?size=32`} alt="" width={16} height={16} className="issue-owner-avatar" onError={() => setImgErr(true)} />}
+          <span className="issue-card__repo-name">{issue.repo.full_name}</span>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--fg-subtle)', flexShrink: 0 }}>{relativeTime(issue.updated_at)}</span>
+      </div>
+      {(issue.labels.length > 0 || issue.repo.language) && (
+        <div className="issue-card__labels">
+          {issue.labels.map(l => {
+            const { bg, fg } = labelColor(l)
+            return <span key={l} style={{ display: 'inline-block', padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 500, background: bg, color: fg, whiteSpace: 'nowrap' }}>{l}</span>
+          })}
+          {issue.repo.language && (
+            <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11, background: 'var(--bg-surface-2)', border: '1px solid var(--border-default)', padding: '0 6px', borderRadius: 999, color: 'var(--fg-muted)' }}>{issue.repo.language}</span>
+          )}
+        </div>
+      )}
+    </a>
+  )
+}
+
 function EmptyState({ onReset }: { onReset: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: '64px 24px' }}>
@@ -281,11 +325,66 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   )
 }
 
+function formatStars(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+type RepoItem = { name: string; lang: string; stars: number; issueCount: number }
+
+function RepoCard({ repo }: { repo: RepoItem }) {
+  const slash = repo.name.indexOf('/')
+  const owner = repo.name.slice(0, slash)
+  const name  = repo.name.slice(slash + 1)
+  const [imgErr, setImgErr] = useState(false)
+
+  return (
+    <a
+      href={`https://github.com/${repo.name}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="repo-card"
+    >
+      <div className="repo-card__top">
+        <div className="repo-card__avatar">
+          {!imgErr
+            ? <Image
+                src={`https://github.com/${owner}.png?size=64`}
+                alt={owner}
+                width={32}
+                height={32}
+                className="repo-card__avatar-img"
+                onError={() => setImgErr(true)}
+              />
+            : <span className="repo-card__avatar-letter">{name[0].toUpperCase()}</span>
+          }
+        </div>
+        <div className="repo-card__meta">
+          <span className="repo-card__owner">{owner}</span>
+          <span className="repo-card__name">{name}</span>
+        </div>
+      </div>
+      <div className="repo-card__bottom">
+        <div className="repo-card__chips">
+          {repo.lang && <span className="repo-card__chip">{repo.lang}</span>}
+          <span className="repo-card__stars-chip">
+            <StarIcon size={10} />{formatStars(repo.stars)}
+          </span>
+        </div>
+        <span className="repo-card__badge">
+          {repo.issueCount} {repo.issueCount === 1 ? 'issue' : 'issues'}
+        </span>
+      </div>
+    </a>
+  )
+}
+
 function ReposList({ issues }: { issues: Issue[] }) {
-  const [hov, setHov] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<'issues' | 'stars' | 'name'>('issues')
 
   const repos = useMemo(() => {
-    const map = new Map<string, { name: string; lang: string; stars: number; issueCount: number }>()
+    const map = new Map<string, RepoItem>()
     for (const issue of issues) {
       const key = issue.repo.full_name
       const existing = map.get(key)
@@ -295,45 +394,56 @@ function ReposList({ issues }: { issues: Issue[] }) {
         map.set(key, { name: key, lang: issue.repo.language, stars: issue.repo.stars, issueCount: 1 })
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.issueCount - a.issueCount)
-  }, [issues])
+    let list = Array.from(map.values())
+    if (search) list = list.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+    if (sortBy === 'stars') return list.sort((a, b) => b.stars - a.stars)
+    if (sortBy === 'name') return list.sort((a, b) => a.name.localeCompare(b.name))
+    return list.sort((a, b) => b.issueCount - a.issueCount)
+  }, [issues, search, sortBy])
 
-  function formatStars(n: number) {
-    if (n >= 1000) return `${Math.round(n / 100) / 10}k`
-    return String(n)
-  }
+  const totalIssues = repos.reduce((s, r) => s + r.issueCount, 0)
 
   return (
-    <main style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', maxWidth: 720 }}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-default)', marginBottom: 4 }}>Starred repositories</div>
-      <div style={{ fontSize: 13, color: 'var(--fg-muted)', marginBottom: 20 }}>{repos.length} repos with open issues</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {repos.map(repo => {
-          const initial = repo.name.split('/')[1][0].toUpperCase()
-          const isHov = hov === repo.name
-          return (
-            <div
-              key={repo.name}
-              onMouseEnter={() => setHov(repo.name)}
-              onMouseLeave={() => setHov(null)}
-              className="repo-row"
-              style={{ background: isHov ? 'var(--bg-hover)' : 'var(--bg-surface)', borderColor: isHov ? 'var(--border-strong)' : 'var(--border-default)' }}
-            >
-              <div className="repo-initial">{initial}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13, fontWeight: 500, color: 'var(--fg-default)' }}>{repo.name}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                {repo.lang && <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11, background: 'var(--bg-surface-2)', border: '1px solid var(--border-default)', padding: '0 6px', borderRadius: 999, color: 'var(--fg-muted)' }}>{repo.lang}</span>}
-                <span style={{ fontSize: 12, color: 'var(--fg-subtle)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <StarIcon size={11} /> {formatStars(repo.stars)}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 500, background: 'var(--accent-subtle)', color: 'var(--accent-fg)', border: '1px solid var(--accent-muted)', padding: '1px 8px', borderRadius: 999 }}>{repo.issueCount} {repo.issueCount === 1 ? 'issue' : 'issues'}</span>
-              </div>
-            </div>
-          )
-        })}
+    <main className="repos-main">
+      <div className="repos-header">
+        <div>
+          <div className="repos-title">Starred repositories</div>
+          <div className="repos-subtitle">{repos.length} repos · {totalIssues} open issues</div>
+        </div>
+        <div className="repos-controls">
+          <div style={{ position: 'relative' }}>
+            <SearchIcon />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Filter repos…"
+              className="repos-search"
+            />
+          </div>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'issues' | 'stars' | 'name')}
+            className="repos-sort-select"
+          >
+            <option value="issues">Most issues</option>
+            <option value="stars">Most stars</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
       </div>
+
+      {repos.length === 0 ? (
+        <div className="repos-empty">
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-default)', marginBottom: 6 }}>
+            {search ? 'No repos match your search' : 'No repos found'}
+          </div>
+          {search && <button onClick={() => setSearch('')} className="secondary-btn">Clear search</button>}
+        </div>
+      ) : (
+        <div className="repos-grid">
+          {repos.map(r => <RepoCard key={r.name} repo={r} />)}
+        </div>
+      )}
     </main>
   )
 }
@@ -417,6 +527,14 @@ function IssueCircleIcon() {
 
 function StarIcon({ size = 14 }: { size?: number }) {
   return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+}
+
+function ListViewIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><circle cx="3" cy="6" r=".5" fill="currentColor"/><circle cx="3" cy="12" r=".5" fill="currentColor"/><circle cx="3" cy="18" r=".5" fill="currentColor"/></svg>
+}
+
+function GridViewIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>
 }
 
 function SearchIcon() {
@@ -516,18 +634,121 @@ const css = `
     transition: background var(--transition-base), border-color var(--transition-base);
     margin-bottom: 0;
   }
-
-  .repo-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; border-radius: 6px; cursor: pointer;
-    border: 1px solid; transition: background var(--transition-base), border-color var(--transition-base);
+  .issue-owner-avatar {
+    width: 16px; height: 16px; border-radius: 50%;
+    object-fit: cover; flex-shrink: 0; opacity: 0.75;
   }
-  .repo-initial {
-    width: 30px; height: 30px; border-radius: 6px;
-    background: var(--bg-surface-2); border: 1px solid var(--border-default);
+
+  .view-toggle {
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border-default); border-radius: var(--radius-md);
+    background: transparent; color: var(--fg-subtle); cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  }
+  .view-toggle:hover { background: var(--bg-hover); color: var(--fg-default); }
+  .view-toggle--active { background: var(--bg-surface-2); color: var(--fg-default); border-color: var(--border-strong); }
+
+  .issues-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+  }
+  .issue-card {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 14px; border-radius: 6px; border: 1px solid var(--border-default);
+    background: var(--bg-surface); text-decoration: none;
+    transition: background var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+  }
+  .issue-card:hover { background: var(--bg-hover); border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+  .issue-card__header { display: flex; align-items: flex-start; gap: 8px; }
+  .issue-card__title { font-size: 13px; font-weight: 500; color: var(--fg-default); line-height: 1.4; flex: 1; }
+  .issue-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .issue-card__repo { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .issue-card__repo-name { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .issue-card__labels { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+  /* Repos grid */
+  .repos-main { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .repos-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  .repos-title { font-size: 16px; font-weight: 600; color: var(--fg-default); margin-bottom: 2px; }
+  .repos-subtitle { font-size: 13px; color: var(--fg-muted); }
+  .repos-controls { display: flex; align-items: center; gap: 8px; }
+  .repos-search {
+    height: 32px; padding-left: 32px; padding-right: 10px; width: 180px;
+    border: 1px solid var(--border-strong); border-radius: 6px; font-size: 13px;
+    font-family: inherit; background: var(--bg-surface); color: var(--fg-default); outline: none;
+    transition: border-color var(--transition-fast);
+  }
+  .repos-search:focus { border-color: var(--border-focus); }
+  .repos-sort-select {
+    height: 32px; padding: 0 8px; border: 1px solid var(--border-strong);
+    border-radius: 6px; font-size: 13px; font-family: inherit;
+    background: var(--bg-surface); color: var(--fg-muted); outline: none; cursor: pointer;
+  }
+  .repos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .repo-card {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 14px 16px; border-radius: 8px; border: 1px solid var(--border-default);
+    background: var(--bg-surface); text-decoration: none;
+    transition: background var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+  }
+  .repo-card:hover {
+    background: var(--bg-hover); border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+  }
+  .repo-card__top { display: flex; align-items: center; gap: 10px; }
+  .repo-card__avatar {
+    width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
+    overflow: hidden; background: var(--bg-surface-2);
+    border: 1px solid var(--border-default);
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 600; color: var(--fg-muted);
-    font-family: var(--font-mono, monospace); flex-shrink: 0;
+  }
+  .repo-card__avatar-img { width: 32px !important; height: 32px !important; object-fit: cover; display: block; }
+  .repo-card__avatar-letter {
+    font-size: 13px; font-weight: 700; color: var(--accent-fg);
+    font-family: var(--font-mono, monospace);
+  }
+  .repo-card__meta { display: flex; flex-direction: column; min-width: 0; }
+  .repo-card__owner { font-size: 11px; color: var(--fg-subtle); line-height: 1.3; }
+  .repo-card__name {
+    font-size: 13px; font-weight: 600; color: var(--fg-default);
+    font-family: var(--font-mono, monospace);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .repo-card__bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .repo-card__chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .repo-card__chip {
+    font-family: var(--font-mono, monospace); font-size: 11px;
+    background: var(--bg-surface-2); border: 1px solid var(--border-default);
+    padding: 1px 7px; border-radius: 999px; color: var(--fg-muted);
+  }
+  .repo-card__stars-chip {
+    font-size: 11px; color: var(--fg-subtle);
+    display: flex; align-items: center; gap: 3px;
+  }
+  .repo-card__badge {
+    font-size: 11px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+    background: var(--accent-subtle); color: var(--accent-fg);
+    border: 1px solid var(--accent-muted); padding: 2px 8px; border-radius: 999px;
+  }
+  .repos-empty { text-align: center; padding: 64px 24px; }
+
+  @media (max-width: 600px) {
+    .repos-main { padding: 16px; }
+    .repos-header { align-items: flex-start; }
+    .repos-controls { width: 100%; }
+    .repos-search { flex: 1; width: auto; min-width: 0; }
+    .repos-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  }
+  @media (max-width: 420px) {
+    .repos-grid { grid-template-columns: 1fr; }
   }
   .secondary-btn {
     display: inline-flex; align-items: center; height: 28px; padding: 0 12px;

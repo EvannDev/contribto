@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="login-center">
           <div className="login-box">
             {/* Logo */}
-            <div className="login-logo">Hello<span className="accent">Commit</span></div>
+            <div className="login-logo">Contrib<span className="accent">.to</span></div>
 
             {/* Card */}
             <div className="login-card">

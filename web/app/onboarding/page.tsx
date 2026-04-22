@@ -27,7 +27,7 @@ export default function OnboardingPage() {
     <>
       <style>{css}</style>
       <div className="ob-page">
-        <div className="ob-logo">Hello<span className="accent">Commit</span></div>
+        <div className="ob-logo">Contrib<span className="accent">.to</span></div>
 
         {phase === 'scanning' && (
           <div className="ob-content">
