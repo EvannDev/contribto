@@ -31,9 +31,10 @@ type IssueWithRepo struct {
 	Labels       []string
 	CreatedAt    *time.Time
 	UpdatedAt    *time.Time
-	RepoFullName string
-	RepoLanguage string
-	RepoStars    int
+	RepoFullName      string
+	RepoLanguage      string
+	RepoStars         int
+	RepoLastScannedAt *time.Time
 }
 
 type Issue struct {

@@ -17,9 +17,10 @@ import (
 const sessionCookieName = "session"
 
 type issueRepoDTO struct {
-	FullName string `json:"full_name"`
-	Language string `json:"language"`
-	Stars    int    `json:"stars"`
+	FullName      string     `json:"full_name"`
+	Language      string     `json:"language"`
+	Stars         int        `json:"stars"`
+	LastScannedAt *time.Time `json:"last_scanned_at"`
 }
 
 type issueDTO struct {
@@ -123,8 +124,9 @@ func (h *Handler) GetIssues(c fiber.Ctx) error {
 	ctx := c.Context()
 
 	var q struct {
-		Limit  int `query:"limit"`
-		Offset int `query:"offset"`
+		Limit  int    `query:"limit"`
+		Offset int    `query:"offset"`
+		Sort   string `query:"sort"`
 	}
 	q.Limit = 50
 	q.Offset = 0
@@ -137,8 +139,14 @@ func (h *Handler) GetIssues(c fiber.Ctx) error {
 	if q.Offset < 0 {
 		q.Offset = 0
 	}
+	switch q.Sort {
+	case "updated_asc", "created_desc", "created_asc":
+		// valid
+	default:
+		q.Sort = "updated_desc"
+	}
 
-	issues, err := h.repo.GetOpenIssuesWithRepo(ctx, userID, q.Limit, q.Offset)
+	issues, err := h.repo.GetOpenIssuesWithRepo(ctx, userID, q.Sort, q.Limit, q.Offset)
 	if err != nil {
 		slog.Error("get open issues with repo", "err", err)
 		return fiber.NewError(http.StatusInternalServerError, "internal error")
@@ -162,9 +170,10 @@ func (h *Handler) GetIssues(c fiber.Ctx) error {
 			Title:  iss.Title,
 			URL:    iss.URL,
 			Repo: issueRepoDTO{
-				FullName: iss.RepoFullName,
-				Language: iss.RepoLanguage,
-				Stars:    iss.RepoStars,
+				FullName:      iss.RepoFullName,
+				Language:      iss.RepoLanguage,
+				Stars:         iss.RepoStars,
+				LastScannedAt: iss.RepoLastScannedAt,
 			},
 			Labels:    labels,
 			CreatedAt: iss.CreatedAt,

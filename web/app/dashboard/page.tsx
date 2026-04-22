@@ -9,7 +9,7 @@ interface Issue {
   number: number
   title: string
   url: string
-  repo: { full_name: string; language: string; stars: number }
+  repo: { full_name: string; language: string; stars: number; last_scanned_at: string | null }
   labels: string[]
   created_at: string | null
   updated_at: string | null
@@ -55,18 +55,21 @@ export default function DashboardPage() {
   const [login, setLogin] = useState('')
   const [langFilter, setLangFilter] = useState('All')
   const [repoFilter, setRepoFilter] = useState('All')
-  const [sortBy, setSortBy] = useState('created_desc')
+  const [sortBy, setSortBy] = useState('updated_desc')
   const [search, setSearch] = useState('')
   const [dark, setDark] = useState(false)
   const [notif, setNotif] = useState(true)
   const [rescanning, setRescanning] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  )
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ''
 
-  function fetchIssues() {
+  function fetchIssues(sort: string) {
     setLoading(true)
-    fetch(`${apiUrl}/issues?limit=100`, { credentials: 'include' })
+    fetch(`${apiUrl}/issues?limit=100&sort=${sort}`, { credentials: 'include' })
       .then(async res => {
         if (res.status === 401) { router.push('/login'); return }
         if (!res.ok) throw new Error(`fetch issues: ${res.status}`)
@@ -79,7 +82,11 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    fetchIssues()
+    fetchIssues(sortBy)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy])
+
+  useEffect(() => {
     fetch(`${apiUrl}/me`, { credentials: 'include' })
       .then(res => res.ok ? res.json() as Promise<{ login: string }> : null)
       .then(data => { if (data) setLogin(data.login) })
@@ -108,11 +115,8 @@ export default function DashboardPage() {
     if (search) list = list.filter(i =>
       i.title.toLowerCase().includes(search.toLowerCase()) || i.repo.full_name.includes(search)
     )
-    if (sortBy === 'oldest') list = [...list].reverse()
-    if (sortBy === 'created_desc') list = [...list].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
-    if (sortBy === 'created_asc') list = [...list].sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
     return list
-  }, [issues, langFilter, repoFilter, search, sortBy])
+  }, [issues, langFilter, repoFilter, search])
 
   return (
     <>
@@ -149,15 +153,16 @@ export default function DashboardPage() {
         <div className="dash-body">
           {activeTab === 'issues' && (
             <>
+              {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
               {/* Filter sidebar */}
-              <aside className="dash-sidebar">
+              <aside className={`dash-sidebar${sidebarOpen ? '' : ' dash-sidebar--hidden'}`}>
                 <FilterSection title="Language">
                   {languages.map(l => (
                     <FilterOption key={l} label={l} active={langFilter === l} onClick={() => setLangFilter(l)} />
                   ))}
                 </FilterSection>
                 <FilterSection title="Sort by">
-                  {[['created_desc', 'Created: newest'], ['created_asc', 'Created: oldest'], ['newest', 'Updated: newest'], ['oldest', 'Updated: oldest']].map(([v, l]) => (
+                  {[['updated_desc', 'Updated: newest'], ['updated_asc', 'Updated: oldest'], ['created_desc', 'Created: newest'], ['created_asc', 'Created: oldest']].map(([v, l]) => (
                     <FilterOption key={v} label={l} active={sortBy === v} onClick={() => setSortBy(v)} />
                   ))}
                 </FilterSection>
@@ -171,6 +176,9 @@ export default function DashboardPage() {
               {/* Main feed */}
               <main className="dash-main">
                 <div className="search-row">
+                  <button className="icon-btn" onClick={() => setSidebarOpen(v => !v)} title="Toggle filters">
+                    <FilterIcon />
+                  </button>
                   <div style={{ flex: 1, position: 'relative' }}>
                     <SearchIcon />
                     <input
@@ -207,7 +215,7 @@ export default function DashboardPage() {
           {activeTab === 'settings' && <SettingsPanel notif={notif} setNotif={setNotif} login={login} rescanning={rescanning} onRescan={async () => {
             setRescanning(true)
             await fetch(`${apiUrl}/sync-stars`, { method: 'POST', credentials: 'include' }).catch(() => {})
-            fetchIssues()
+            fetchIssues(sortBy)
             setRescanning(false)
           }} onDisconnect={async () => {
             await fetch('/api/auth/logout', { method: 'POST' })
@@ -272,7 +280,7 @@ function IssueRow({ issue }: { issue: Issue }) {
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
-          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>{relativeTime(issue.updated_at)}</span>
+          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>updated {relativeTime(issue.updated_at)}</span>
         </div>
       </div>
     </a>
@@ -293,7 +301,7 @@ function IssueCard({ issue }: { issue: Issue }) {
           {!imgErr && <Image src={`https://github.com/${owner}.png?size=32`} alt="" width={16} height={16} className="issue-owner-avatar" onError={() => setImgErr(true)} />}
           <span className="issue-card__repo-name">{issue.repo.full_name}</span>
         </div>
-        <span style={{ fontSize: 11, color: 'var(--fg-subtle)', flexShrink: 0 }}>{relativeTime(issue.updated_at)}</span>
+        <span style={{ fontSize: 11, color: 'var(--fg-subtle)', flexShrink: 0 }}>updated {relativeTime(issue.updated_at)}</span>
       </div>
       {(issue.labels.length > 0 || issue.repo.language) && (
         <div className="issue-card__labels">
@@ -330,7 +338,7 @@ function formatStars(n: number) {
   return String(n)
 }
 
-type RepoItem = { name: string; lang: string; stars: number; issueCount: number }
+type RepoItem = { name: string; lang: string; stars: number; issueCount: number; lastScannedAt: string | null }
 
 function RepoCard({ repo }: { repo: RepoItem }) {
   const slash = repo.name.indexOf('/')
@@ -375,6 +383,9 @@ function RepoCard({ repo }: { repo: RepoItem }) {
           {repo.issueCount} {repo.issueCount === 1 ? 'issue' : 'issues'}
         </span>
       </div>
+      {repo.lastScannedAt && (
+        <span style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>scanned {relativeTime(repo.lastScannedAt)}</span>
+      )}
     </a>
   )
 }
@@ -391,7 +402,7 @@ function ReposList({ issues }: { issues: Issue[] }) {
       if (existing) {
         existing.issueCount++
       } else {
-        map.set(key, { name: key, lang: issue.repo.language, stars: issue.repo.stars, issueCount: 1 })
+        map.set(key, { name: key, lang: issue.repo.language, stars: issue.repo.stars, issueCount: 1, lastScannedAt: issue.repo.last_scanned_at })
       }
     }
     let list = Array.from(map.values())
@@ -551,6 +562,10 @@ function SunIcon() {
 
 function MoonIcon() {
   return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+}
+
+function FilterIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
 }
 
 const css = `
@@ -739,6 +754,38 @@ const css = `
     border: 1px solid var(--accent-muted); padding: 2px 8px; border-radius: 999px;
   }
   .repos-empty { text-align: center; padding: 64px 24px; }
+
+  /* Sidebar backdrop — only renders on mobile */
+  .sidebar-backdrop {
+    display: none;
+  }
+
+  /* Mobile sidebar: fixed overlay drawer */
+  @media (max-width: 767px) {
+    .sidebar-backdrop {
+      display: block;
+      position: fixed; inset: 0; top: 48px;
+      background: rgba(0,0,0,0.35); z-index: 99;
+    }
+    .dash-sidebar {
+      position: fixed; top: 48px; left: 0; bottom: 0; z-index: 100;
+      width: 260px !important;
+      transform: translateX(0);
+      transition: transform 220ms ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+    }
+    .dash-sidebar--hidden {
+      transform: translateX(-100%) !important;
+      pointer-events: none;
+    }
+  }
+
+  /* Desktop sidebar: inline, hide by collapsing width */
+  @media (min-width: 768px) {
+    .dash-sidebar--hidden {
+      display: none;
+    }
+  }
 
   @media (max-width: 600px) {
     .repos-main { padding: 16px; }

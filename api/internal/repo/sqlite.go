@@ -198,12 +198,32 @@ func (r *SQLiteRepo) GetOpenIssuesForUser(ctx context.Context, userID int64, lim
 	return issues, nil
 }
 
-func (r *SQLiteRepo) GetOpenIssuesWithRepo(ctx context.Context, userID int64, limit, offset int) ([]domain.IssueWithRepo, error) {
-	rows, err := r.q.GetOpenIssuesWithRepo(ctx, dbsqlc.GetOpenIssuesWithRepoParams{
-		UserID: userID,
-		Limit:  int64(limit),
-		Offset: int64(offset),
-	})
+func (r *SQLiteRepo) GetOpenIssuesWithRepo(ctx context.Context, userID int64, sort string, limit, offset int) ([]domain.IssueWithRepo, error) {
+	p := dbsqlc.GetOpenIssuesWithRepoParams{UserID: userID, Limit: int64(limit), Offset: int64(offset)}
+	var rows []dbsqlc.GetOpenIssuesWithRepoRow
+	var err error
+	switch sort {
+	case "updated_asc":
+		var r2 []dbsqlc.GetOpenIssuesWithRepoByUpdatedAscRow
+		r2, err = r.q.GetOpenIssuesWithRepoByUpdatedAsc(ctx, dbsqlc.GetOpenIssuesWithRepoByUpdatedAscParams(p))
+		for _, row := range r2 {
+			rows = append(rows, dbsqlc.GetOpenIssuesWithRepoRow(row))
+		}
+	case "created_desc":
+		var r2 []dbsqlc.GetOpenIssuesWithRepoByCreatedDescRow
+		r2, err = r.q.GetOpenIssuesWithRepoByCreatedDesc(ctx, dbsqlc.GetOpenIssuesWithRepoByCreatedDescParams(p))
+		for _, row := range r2 {
+			rows = append(rows, dbsqlc.GetOpenIssuesWithRepoRow(row))
+		}
+	case "created_asc":
+		var r2 []dbsqlc.GetOpenIssuesWithRepoByCreatedAscRow
+		r2, err = r.q.GetOpenIssuesWithRepoByCreatedAsc(ctx, dbsqlc.GetOpenIssuesWithRepoByCreatedAscParams(p))
+		for _, row := range r2 {
+			rows = append(rows, dbsqlc.GetOpenIssuesWithRepoRow(row))
+		}
+	default: // updated_desc
+		rows, err = r.q.GetOpenIssuesWithRepo(ctx, p)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get open issues with repo: %w", err)
 	}
@@ -228,6 +248,10 @@ func (r *SQLiteRepo) GetOpenIssuesWithRepo(ctx context.Context, userID int64, li
 		if row.UpdatedAtGithub.Valid {
 			t := row.UpdatedAtGithub.Time
 			issue.UpdatedAt = &t
+		}
+		if row.RepoLastScannedAt.Valid {
+			t := row.RepoLastScannedAt.Time
+			issue.RepoLastScannedAt = &t
 		}
 		issues[i] = issue
 	}

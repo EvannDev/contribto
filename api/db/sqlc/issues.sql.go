@@ -85,7 +85,8 @@ SELECT
     i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
     r.full_name   AS repo_full_name,
     r.language    AS repo_language,
-    r.stars_count AS repo_stars_count
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
 FROM issues i
 JOIN repos r       ON r.id       = i.repo_id
 JOIN user_stars us ON us.repo_id = r.id
@@ -103,16 +104,17 @@ type GetOpenIssuesWithRepoParams struct {
 }
 
 type GetOpenIssuesWithRepoRow struct {
-	ID              int64
-	Number          int64
-	Title           string
-	Url             string
-	Labels          sql.NullString
-	CreatedAtGithub sql.NullTime
-	UpdatedAtGithub sql.NullTime
-	RepoFullName    string
-	RepoLanguage    sql.NullString
-	RepoStarsCount  sql.NullInt64
+	ID                int64
+	Number            int64
+	Title             string
+	Url               string
+	Labels            sql.NullString
+	CreatedAtGithub   sql.NullTime
+	UpdatedAtGithub   sql.NullTime
+	RepoFullName      string
+	RepoLanguage      sql.NullString
+	RepoStarsCount    sql.NullInt64
+	RepoLastScannedAt sql.NullTime
 }
 
 func (q *Queries) GetOpenIssuesWithRepo(ctx context.Context, arg GetOpenIssuesWithRepoParams) ([]GetOpenIssuesWithRepoRow, error) {
@@ -135,6 +137,223 @@ func (q *Queries) GetOpenIssuesWithRepo(ctx context.Context, arg GetOpenIssuesWi
 			&i.RepoFullName,
 			&i.RepoLanguage,
 			&i.RepoStarsCount,
+			&i.RepoLastScannedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOpenIssuesWithRepoByCreatedAsc = `-- name: GetOpenIssuesWithRepoByCreatedAsc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.created_at_github ASC
+LIMIT ?
+OFFSET ?
+`
+
+type GetOpenIssuesWithRepoByCreatedAscParams struct {
+	UserID int64
+	Limit  int64
+	Offset int64
+}
+
+type GetOpenIssuesWithRepoByCreatedAscRow struct {
+	ID                int64
+	Number            int64
+	Title             string
+	Url               string
+	Labels            sql.NullString
+	CreatedAtGithub   sql.NullTime
+	UpdatedAtGithub   sql.NullTime
+	RepoFullName      string
+	RepoLanguage      sql.NullString
+	RepoStarsCount    sql.NullInt64
+	RepoLastScannedAt sql.NullTime
+}
+
+func (q *Queries) GetOpenIssuesWithRepoByCreatedAsc(ctx context.Context, arg GetOpenIssuesWithRepoByCreatedAscParams) ([]GetOpenIssuesWithRepoByCreatedAscRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOpenIssuesWithRepoByCreatedAsc, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOpenIssuesWithRepoByCreatedAscRow
+	for rows.Next() {
+		var i GetOpenIssuesWithRepoByCreatedAscRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Title,
+			&i.Url,
+			&i.Labels,
+			&i.CreatedAtGithub,
+			&i.UpdatedAtGithub,
+			&i.RepoFullName,
+			&i.RepoLanguage,
+			&i.RepoStarsCount,
+			&i.RepoLastScannedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOpenIssuesWithRepoByCreatedDesc = `-- name: GetOpenIssuesWithRepoByCreatedDesc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.created_at_github DESC
+LIMIT ?
+OFFSET ?
+`
+
+type GetOpenIssuesWithRepoByCreatedDescParams struct {
+	UserID int64
+	Limit  int64
+	Offset int64
+}
+
+type GetOpenIssuesWithRepoByCreatedDescRow struct {
+	ID                int64
+	Number            int64
+	Title             string
+	Url               string
+	Labels            sql.NullString
+	CreatedAtGithub   sql.NullTime
+	UpdatedAtGithub   sql.NullTime
+	RepoFullName      string
+	RepoLanguage      sql.NullString
+	RepoStarsCount    sql.NullInt64
+	RepoLastScannedAt sql.NullTime
+}
+
+func (q *Queries) GetOpenIssuesWithRepoByCreatedDesc(ctx context.Context, arg GetOpenIssuesWithRepoByCreatedDescParams) ([]GetOpenIssuesWithRepoByCreatedDescRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOpenIssuesWithRepoByCreatedDesc, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOpenIssuesWithRepoByCreatedDescRow
+	for rows.Next() {
+		var i GetOpenIssuesWithRepoByCreatedDescRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Title,
+			&i.Url,
+			&i.Labels,
+			&i.CreatedAtGithub,
+			&i.UpdatedAtGithub,
+			&i.RepoFullName,
+			&i.RepoLanguage,
+			&i.RepoStarsCount,
+			&i.RepoLastScannedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOpenIssuesWithRepoByUpdatedAsc = `-- name: GetOpenIssuesWithRepoByUpdatedAsc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.updated_at_github ASC
+LIMIT ?
+OFFSET ?
+`
+
+type GetOpenIssuesWithRepoByUpdatedAscParams struct {
+	UserID int64
+	Limit  int64
+	Offset int64
+}
+
+type GetOpenIssuesWithRepoByUpdatedAscRow struct {
+	ID                int64
+	Number            int64
+	Title             string
+	Url               string
+	Labels            sql.NullString
+	CreatedAtGithub   sql.NullTime
+	UpdatedAtGithub   sql.NullTime
+	RepoFullName      string
+	RepoLanguage      sql.NullString
+	RepoStarsCount    sql.NullInt64
+	RepoLastScannedAt sql.NullTime
+}
+
+func (q *Queries) GetOpenIssuesWithRepoByUpdatedAsc(ctx context.Context, arg GetOpenIssuesWithRepoByUpdatedAscParams) ([]GetOpenIssuesWithRepoByUpdatedAscRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOpenIssuesWithRepoByUpdatedAsc, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOpenIssuesWithRepoByUpdatedAscRow
+	for rows.Next() {
+		var i GetOpenIssuesWithRepoByUpdatedAscRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Title,
+			&i.Url,
+			&i.Labels,
+			&i.CreatedAtGithub,
+			&i.UpdatedAtGithub,
+			&i.RepoFullName,
+			&i.RepoLanguage,
+			&i.RepoStarsCount,
+			&i.RepoLastScannedAt,
 		); err != nil {
 			return nil, err
 		}

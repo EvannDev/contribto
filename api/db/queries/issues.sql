@@ -39,12 +39,61 @@ SELECT
     i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
     r.full_name   AS repo_full_name,
     r.language    AS repo_language,
-    r.stars_count AS repo_stars_count
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
 FROM issues i
 JOIN repos r       ON r.id       = i.repo_id
 JOIN user_stars us ON us.repo_id = r.id
 WHERE us.user_id = ?
   AND i.is_open = 1
 ORDER BY i.updated_at_github DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: GetOpenIssuesWithRepoByUpdatedAsc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.updated_at_github ASC
+LIMIT ?
+OFFSET ?;
+
+-- name: GetOpenIssuesWithRepoByCreatedDesc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.created_at_github DESC
+LIMIT ?
+OFFSET ?;
+
+-- name: GetOpenIssuesWithRepoByCreatedAsc :many
+SELECT
+    i.id, i.number, i.title, i.url, i.labels, i.created_at_github, i.updated_at_github,
+    r.full_name   AS repo_full_name,
+    r.language    AS repo_language,
+    r.stars_count     AS repo_stars_count,
+    r.last_scanned_at AS repo_last_scanned_at
+FROM issues i
+JOIN repos r       ON r.id       = i.repo_id
+JOIN user_stars us ON us.repo_id = r.id
+WHERE us.user_id = ?
+  AND i.is_open = 1
+ORDER BY i.created_at_github ASC
 LIMIT ?
 OFFSET ?;

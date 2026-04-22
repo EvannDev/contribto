@@ -31,6 +31,6 @@ type Repository interface {
 	UpsertIssue(ctx context.Context, issue *domain.Issue) error
 	MarkIssuesClosed(ctx context.Context, repoID int64, openGithubIDs []int64) error
 	GetOpenIssuesForUser(ctx context.Context, userID int64, limit, offset int) ([]domain.Issue, error)
-	GetOpenIssuesWithRepo(ctx context.Context, userID int64, limit, offset int) ([]domain.IssueWithRepo, error)
+	GetOpenIssuesWithRepo(ctx context.Context, userID int64, sort string, limit, offset int) ([]domain.IssueWithRepo, error)
 	CountOpenIssuesForUser(ctx context.Context, userID int64) (int, error)
 }
