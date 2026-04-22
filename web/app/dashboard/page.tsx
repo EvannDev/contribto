@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const [login, setLogin] = useState('')
   const [langFilter, setLangFilter] = useState('All')
   const [repoFilter, setRepoFilter] = useState('All')
-  const [sortBy, setSortBy] = useState('newest')
+  const [sortBy, setSortBy] = useState('created_desc')
   const [search, setSearch] = useState('')
   const [dark, setDark] = useState(false)
   const [notif, setNotif] = useState(true)
