@@ -40,7 +40,7 @@ export default function LandingPage() {
           <button className="theme-btn" onClick={toggleDark} aria-label="Toggle dark mode">
             {dark ? <SunIcon /> : <MoonIcon />}
           </button>
-          <a href="https://github.com" className="nav-link">GitHub</a>
+          <a href="https://github.com/EvannDev/contribto" className="nav-link">GitHub</a>
           <a href="/login" className="btn btn-primary btn-sm">Sign in</a>
         </div>
       </nav>
@@ -152,7 +152,7 @@ export default function LandingPage() {
       <footer className="landing-footer">
         <span className="logo" style={{ fontSize: 14 }}>Contrib<span className="accent">.to</span></span>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <a href="https://github.com" style={{ fontSize: 13, color: 'var(--fg-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <a href="https://github.com/EvannDev/contribto" style={{ fontSize: 13, color: 'var(--fg-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <GithubIcon size={14} /> Source
           </a>
           <span style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>Made with too much coffee.</span>

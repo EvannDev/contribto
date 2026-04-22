@@ -10,6 +10,15 @@ import (
 	"database/sql"
 )
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = ?
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
+}
+
 const getUserByGithubID = `-- name: GetUserByGithubID :one
 SELECT id, github_id, github_login, encrypted_token, created_at, last_synced_at FROM users WHERE github_id = ?
 `

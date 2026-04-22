@@ -79,6 +79,13 @@ func (r *SQLiteRepo) UpdateUserSyncedAt(ctx context.Context, userID int64, t tim
 	return nil
 }
 
+func (r *SQLiteRepo) DeleteUser(ctx context.Context, userID int64) error {
+	if err := r.q.DeleteUser(ctx, userID); err != nil {
+		return fmt.Errorf("delete user: %w", err)
+	}
+	return nil
+}
+
 // --- Repos ---
 
 func (r *SQLiteRepo) UpsertRepo(ctx context.Context, repo *domain.Repo) error {

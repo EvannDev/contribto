@@ -17,3 +17,6 @@ UPDATE users SET encrypted_token = ? WHERE id = ?;
 
 -- name: UpdateUserSyncedAt :exec
 UPDATE users SET last_synced_at = ? WHERE id = ?;
+
+-- name: DeleteUser :exec
+DELETE FROM users WHERE id = ?;

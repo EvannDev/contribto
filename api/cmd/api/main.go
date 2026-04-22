@@ -134,6 +134,7 @@ func main() {
 
 	protected := app.Group("/", httphandler.RequireAuth())
 	protected.Get("/me", h.GetMe)
+	protected.Delete("/me", h.DeleteAccount)
 	protected.Get("/issues", h.GetIssues)
 	protected.Post("/sync-stars", h.PostSyncStars)
 

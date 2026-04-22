@@ -202,6 +202,27 @@ func (h *Handler) GetMe(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{"login": user.GithubLogin, "github_id": user.GithubID})
 }
 
+// DeleteAccount handles DELETE /me (auth required).
+// Deletes the user and all associated data, then clears the session cookie.
+func (h *Handler) DeleteAccount(c fiber.Ctx) error {
+	userID := UserIDFromContext(c)
+	if err := h.repo.DeleteUser(c.Context(), userID); err != nil {
+		slog.Error("delete user", "userID", userID, "err", err)
+		return fiber.NewError(http.StatusInternalServerError, "internal error")
+	}
+	c.Cookie(&fiber.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+		Path:     "/",
+	})
+	slog.Info("account deleted", "userID", userID)
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // PostSyncStars handles POST /sync-stars (auth required).
 // Fetches the user's starred repos from GitHub and upserts them into the DB.
 func (h *Handler) PostSyncStars(c fiber.Ctx) error {

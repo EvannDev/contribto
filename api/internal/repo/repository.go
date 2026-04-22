@@ -17,6 +17,7 @@ type Repository interface {
 	UpsertUser(ctx context.Context, u *domain.User) error
 	UpdateUserToken(ctx context.Context, userID int64, encryptedToken []byte) error
 	UpdateUserSyncedAt(ctx context.Context, userID int64, t time.Time) error
+	DeleteUser(ctx context.Context, userID int64) error
 
 	// Repos
 	UpsertRepo(ctx context.Context, r *domain.Repo) error

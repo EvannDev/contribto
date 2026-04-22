@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const [notif, setNotif] = useState(true)
   const [rescanning, setRescanning] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [avatarErr, setAvatarErr] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true
   )
@@ -141,7 +142,10 @@ export default function DashboardPage() {
             <button className="icon-btn" onClick={toggleDark} title="Toggle dark mode">
               {dark ? <SunIcon /> : <MoonIcon />}
             </button>
-            <div className="avatar">{login ? login[0].toUpperCase() : '?'}</div>
+            {login && !avatarErr
+              ? <Image src={`https://github.com/${login}.png?size=64`} alt={login} width={28} height={28} className="avatar avatar--photo" onError={() => setAvatarErr(true)} />
+              : <div className="avatar">{login ? login[0].toUpperCase() : '?'}</div>
+            }
             <button className="ghost-btn" onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' })
               router.push('/')
@@ -219,6 +223,10 @@ export default function DashboardPage() {
             setRescanning(false)
           }} onDisconnect={async () => {
             await fetch('/api/auth/logout', { method: 'POST' })
+            router.push('/')
+          }} onDeleteAccount={async () => {
+            await fetch(`${apiUrl}/me`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
+            await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
             router.push('/')
           }} />}
         </div>
@@ -459,61 +467,106 @@ function ReposList({ issues }: { issues: Issue[] }) {
   )
 }
 
-function SettingsPanel({ notif, setNotif, login, rescanning, onRescan, onDisconnect }: {
+function SettingsPanel({ notif, setNotif, login, rescanning, onRescan, onDisconnect, onDeleteAccount }: {
   notif: boolean
   setNotif: (v: boolean) => void
   login: string
   rescanning: boolean
   onRescan: () => void
   onDisconnect: () => void
+  onDeleteAccount: () => Promise<void>
 }) {
+  const [imgErr, setImgErr] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   return (
-    <main style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', maxWidth: 560 }}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg-default)', marginBottom: 20 }}>Settings</div>
+    <main className="settings-main">
 
-      <SettingsSection title="Account">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border-default)' }}>
-          <div className="avatar" style={{ width: 36, height: 36, fontSize: 13 }}>{login ? login[0].toUpperCase() : '?'}</div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-default)' }}>{login || '—'}</div>
-            <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>Signed in via GitHub OAuth</div>
+      {/* Profile card */}
+      <div className="settings-profile">
+        <div className="settings-profile__ring">
+          {login && !imgErr
+            ? <Image src={`https://github.com/${login}.png?size=128`} alt={login} width={64} height={64} className="settings-profile__img" onError={() => setImgErr(true)} />
+            : <span className="settings-profile__letter">{login ? login[0].toUpperCase() : '?'}</span>
+          }
+        </div>
+        <div className="settings-profile__name">{login || '—'}</div>
+        {login && (
+          <a href={`https://github.com/${login}`} target="_blank" rel="noopener noreferrer" className="settings-profile__handle">
+            github.com/{login}
+          </a>
+        )}
+      </div>
+
+      {/* Preferences */}
+      <div className="settings-group">
+        <div className="settings-group__label">Preferences</div>
+        <div className="settings-card">
+          <div className="srow">
+            <div className="srow__icon"><BellIcon /></div>
+            <div className="srow__body">
+              <div className="srow__label">Email notifications</div>
+              <div className="srow__desc">Get notified when new issues appear in your starred repos</div>
+            </div>
+            <Toggle value={notif} onChange={setNotif} />
           </div>
         </div>
-        <div style={{ padding: '16px 0' }}>
-          <button onClick={onDisconnect} style={{ display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px', fontSize: 12, fontWeight: 500, borderRadius: 6, cursor: 'pointer', color: '#B91C1C', background: '#FEF2F2', border: '1px solid rgba(185,28,28,0.2)', fontFamily: 'inherit' }}>
-            Disconnect account
-          </button>
-        </div>
-      </SettingsSection>
+      </div>
 
-      <SettingsSection title="Preferences">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-default)' }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg-default)' }}>Email notifications</div>
-            <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>Get an email when new issues are found</div>
+      {/* Sync */}
+      <div className="settings-group">
+        <div className="settings-group__label">Data & Sync</div>
+        <div className="settings-card">
+          <div className="srow">
+            <div className="srow__icon"><RefreshIcon /></div>
+            <div className="srow__body">
+              <div className="srow__label">Re-scan repositories</div>
+              <div className="srow__desc">Sync your latest GitHub stars and rediscover open issues</div>
+            </div>
+            <button className="secondary-btn" onClick={onRescan} disabled={rescanning}>
+              {rescanning ? 'Scanning…' : 'Rescan'}
+            </button>
           </div>
-          <Toggle value={notif} onChange={setNotif} />
         </div>
-      </SettingsSection>
+      </div>
 
-      <SettingsSection title="Data">
-        <div style={{ fontSize: 13, color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: 12 }}>
-          We store your GitHub username and the list of your public starred repositories. Nothing else. To delete your data, disconnect your account above.
+      {/* Danger zone */}
+      <div className="settings-group">
+        <div className="settings-group__label">Danger zone</div>
+        <div className="settings-card settings-card--danger" style={{ marginBottom: 8 }}>
+          <div className="srow">
+            <div className="srow__icon srow__icon--danger"><UnlinkIcon /></div>
+            <div className="srow__body">
+              <div className="srow__label">Disconnect account</div>
+              <div className="srow__desc">Signs you out of your account</div>
+            </div>
+            <button onClick={onDisconnect} className="danger-btn">Disconnect</button>
+          </div>
         </div>
-        <button className="secondary-btn" onClick={onRescan} disabled={rescanning}>
-          {rescanning ? 'Scanning…' : 'Re-scan repositories'}
-        </button>
-      </SettingsSection>
+        <div className="settings-card settings-card--danger">
+          <div className="srow">
+            <div className="srow__icon srow__icon--danger"><TrashIcon /></div>
+            <div className="srow__body">
+              <div className="srow__label">Delete my account</div>
+              <div className="srow__desc">Permanently deletes your account and all associated data. This cannot be undone.</div>
+            </div>
+            {!confirmDelete
+              ? <button onClick={() => setConfirmDelete(true)} className="danger-btn">Delete</button>
+              : <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>Sure?</span>
+                  <button onClick={() => setConfirmDelete(false)} className="secondary-btn">Cancel</button>
+                  <button disabled={deleting} onClick={async () => {
+                    setDeleting(true)
+                    await onDeleteAccount()
+                  }} className="danger-btn">{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+                </div>
+            }
+          </div>
+        </div>
+      </div>
+
     </main>
-  )
-}
-
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--border-default)' }}>{title}</div>
-      {children}
-    </div>
   )
 }
 
@@ -568,6 +621,22 @@ function FilterIcon() {
   return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
 }
 
+function BellIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+}
+
+function RefreshIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+}
+
+function UnlinkIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/><path d="m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/><line x1="8" x2="8" y1="2" y2="5"/><line x1="2" x2="5" y1="8" y2="8"/><line x1="16" x2="16" y1="19" y2="22"/><line x1="19" x2="22" y1="16" y2="16"/></svg>
+}
+
+function TrashIcon() {
+  return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+}
+
 const css = `
   html, body { height: 100%; overflow: hidden; }
   .dash-layout { display: flex; flex-direction: column; height: 100vh; background: var(--bg-base); }
@@ -595,6 +664,9 @@ const css = `
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600; color: var(--fg-muted);
     font-family: var(--font-mono, monospace); flex-shrink: 0;
+  }
+  .avatar--photo {
+    object-fit: cover; display: block;
   }
   .icon-btn {
     width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
@@ -797,6 +869,84 @@ const css = `
   @media (max-width: 420px) {
     .repos-grid { grid-template-columns: 1fr; }
   }
+  /* Settings ──────────────────────────────────────── */
+  .settings-main {
+    flex: 1; overflow-y: auto; padding: 32px 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+
+  .settings-profile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 28px 24px 22px; width: 100%; max-width: 520px;
+    background: var(--bg-surface); border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-sm);
+  }
+  .settings-profile__ring {
+    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+    background: var(--bg-surface-2); overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--accent-muted);
+    box-shadow: 0 0 0 4px var(--accent-subtle);
+    margin-bottom: 6px;
+  }
+  .settings-profile__img { width: 64px !important; height: 64px !important; object-fit: cover; display: block; }
+  .settings-profile__letter { font-size: 24px; font-weight: 700; color: var(--accent-fg); font-family: var(--font-mono, monospace); }
+  .settings-profile__name { font-size: 15px; font-weight: 600; color: var(--fg-default); }
+  .settings-profile__handle {
+    font-size: 12px; color: var(--fg-subtle); font-family: var(--font-mono, monospace); text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  .settings-profile__handle:hover { color: var(--accent-fg); }
+
+  .settings-group { width: 100%; max-width: 520px; }
+  .settings-group__label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--fg-subtle);
+    padding: 0 2px; margin-bottom: 6px;
+  }
+  .settings-card {
+    background: var(--bg-surface); border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .settings-card--danger {
+    border-color: rgba(185,28,28,0.18); background: #fef9f9;
+  }
+  [data-theme="dark"] .settings-card--danger {
+    border-color: rgba(239,68,68,0.18); background: rgba(239,68,68,0.04);
+  }
+
+  .srow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+  .srow + .srow { border-top: 1px solid var(--border-default); }
+  .srow__icon {
+    width: 32px; height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-surface-2); border: 1px solid var(--border-default);
+    border-radius: var(--radius-md); color: var(--fg-muted);
+  }
+  .srow__icon--danger {
+    color: #B91C1C; background: #FEE2E2; border-color: rgba(185,28,28,0.2);
+  }
+  [data-theme="dark"] .srow__icon--danger {
+    color: #FCA5A5; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2);
+  }
+  .srow__body { flex: 1; min-width: 0; }
+  .srow__label { font-size: 13px; font-weight: 500; color: var(--fg-default); }
+  .srow__desc { font-size: 12px; color: var(--fg-muted); margin-top: 1px; line-height: 1.4; }
+
+  .danger-btn {
+    display: inline-flex; align-items: center; height: 28px; padding: 0 12px;
+    font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer;
+    color: #B91C1C; background: #FEF2F2; border: 1px solid rgba(185,28,28,0.2);
+    font-family: inherit; transition: background var(--transition-fast); flex-shrink: 0;
+  }
+  .danger-btn:hover { background: #FEE2E2; }
+
+  @media (max-width: 600px) {
+    .settings-main { padding: 20px 16px; }
+    .srow { gap: 10px; flex-wrap: wrap; }
+    .srow__body { min-width: calc(100% - 48px); }
+  }
+
   .secondary-btn {
     display: inline-flex; align-items: center; height: 28px; padding: 0 12px;
     font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer;
