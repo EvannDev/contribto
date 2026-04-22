@@ -155,7 +155,7 @@ export default function DashboardPage() {
                   ))}
                 </FilterSection>
                 <FilterSection title="Sort by">
-                  {[['newest', 'Updated: newest'], ['oldest', 'Updated: oldest'], ['created_desc', 'Created: newest'], ['created_asc', 'Created: oldest']].map(([v, l]) => (
+                  {[['created_desc', 'Created: newest'], ['created_asc', 'Created: oldest'], ['newest', 'Updated: newest'], ['oldest', 'Updated: oldest']].map(([v, l]) => (
                     <FilterOption key={v} label={l} active={sortBy === v} onClick={() => setSortBy(v)} />
                   ))}
                 </FilterSection>
