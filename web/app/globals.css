@@ -6,7 +6,7 @@
 /* ── Base Palette ─────────────────────────────────────────── */
 :root {
   --neutral-0:   #FFFFFF;
-  --neutral-50:  #FAF9F7;
+  --neutral-50:  #F8F6F1;
   --neutral-100: #F3F1ED;
   --neutral-200: #E8E5DF;
   --neutral-300: #D4D0C8;
@@ -15,7 +15,7 @@
   --neutral-600: #57524A;
   --neutral-700: #38342D;
   --neutral-800: #242018;
-  --neutral-900: #18170F;
+  --neutral-900: #1C1917;
   --neutral-950: #0F0E0D;
 
   --amber-50:  #FFF8ED;
@@ -36,6 +36,41 @@
   --blue-50:   #EFF6FF;
   --blue-500:  #3B82F6;
   --blue-700:  #1D4ED8;
+}
+
+/* ── Landing page design tokens (rust / warm palette) ──────── */
+:root {
+  --hc-bg:           #F8F6F1;
+  --hc-bg-subtle:    #F0EDE6;
+  --hc-bg-muted:     #E8E4DC;
+  --hc-bg-overlay:   rgba(248,246,241,0.92);
+  --hc-text:         #1C1917;
+  --hc-text-muted:   #6B6560;
+  --hc-text-subtle:  #9C9690;
+  --hc-border:       #DDD9D1;
+  --hc-border-strong:#C8C3B8;
+  --hc-border-subtle:#E8E4DC;
+  --hc-accent:       #C2540A;
+  --hc-accent-hover: #A8470A;
+  --hc-accent-subtle:#FEF3E2;
+  --hc-accent-border:#F5C89A;
+}
+
+[data-theme="dark"] {
+  --hc-bg:           #0F0E0D;
+  --hc-bg-subtle:    #181614;
+  --hc-bg-muted:     #221F1C;
+  --hc-bg-overlay:   rgba(15,14,13,0.92);
+  --hc-text:         #EDE9E1;
+  --hc-text-muted:   #908A82;
+  --hc-text-subtle:  #605C56;
+  --hc-border:       #2E2B27;
+  --hc-border-strong:#3D3935;
+  --hc-border-subtle:#231F1C;
+  --hc-accent:       #E06D2D;
+  --hc-accent-hover: #F07D3D;
+  --hc-accent-subtle:#2A1A0A;
+  --hc-accent-border:#5A2E0A;
 }
 
 /* ── Light Mode ───────────────────────────────────────────── */
@@ -134,7 +169,7 @@
 
   body {
     font-family: var(--font-sans), 'Inter', -apple-system, sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.5;
     color: var(--fg-default);
     background-color: var(--bg-base);

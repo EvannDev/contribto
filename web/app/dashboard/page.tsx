@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { Logo } from '@/components/logo'
 
 interface Issue {
   id: number
@@ -126,7 +127,7 @@ export default function DashboardPage() {
         {/* Header */}
         <header className="dash-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <div className="header-logo">Contrib<span className="accent">.to</span></div>
+            <Logo className="header-logo" iconSize={18} />
             {([['issues', 'Issues'], ['repos', 'Starred repos'], ['settings', 'Settings']] as [Tab, string][]).map(([id, label]) => (
               <button
                 key={id}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Logo } from '@/components/logo'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -42,7 +43,7 @@ export default function LoginPage() {
         <div className="login-center">
           <div className="login-box">
             {/* Logo */}
-            <div className="login-logo">Contrib<span className="accent">.to</span></div>
+            <Logo className="login-logo" iconSize={32} />
 
             {/* Card */}
             <div className="login-card">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Logo } from '@/components/logo'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -27,7 +28,7 @@ export default function OnboardingPage() {
     <>
       <style>{css}</style>
       <div className="ob-page">
-        <div className="ob-logo">Contrib<span className="accent">.to</span></div>
+        <Logo className="ob-logo" iconSize={28} />
 
         {phase === 'scanning' && (
           <div className="ob-content">

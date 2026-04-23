@@ -11,6 +11,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/encryptcookie"
+	"github.com/gofiber/fiber/v3/middleware/healthcheck"
+	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
@@ -128,6 +130,9 @@ func main() {
 		AllowOrigins:     []string{cfg.FrontendOrigin},
 		AllowCredentials: true,
 	}))
+	app.Use(helmet.New())
+	app.Get(healthcheck.LivenessEndpoint, healthcheck.New())
+	app.Get(healthcheck.ReadinessEndpoint, healthcheck.New())
 
 	app.Post("/auth/github", h.PostAuthGitHub)
 	app.Post("/auth/logout", h.PostAuthLogout)

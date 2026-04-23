@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="75 76 360 360" width="100%" height="100%">
+  <g fill="none" stroke="#F59E0B" stroke-width="18" stroke-linecap="butt">
+    <line x1="145" y1="256" x2="333" y2="256" />
+    <line x1="256" y1="256" x2="326" y2="186" />
+    <line x1="256" y1="256" x2="326" y2="326" />
+  </g>
+  <polygon points="332,224 365,256 332,288" fill="#F59E0B" />
+  <g fill="#F59E0B">
+    <circle cx="115" cy="256" r="18" />
+    <circle cx="395" cy="256" r="18" />
+    <circle cx="347" cy="165" r="18" />
+    <circle cx="347" cy="347" r="18" />
+  </g>
+</svg>
