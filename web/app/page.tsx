@@ -56,7 +56,7 @@ const FAQ: FAQItem[] = [
   },
   {
     q: 'Do you store my GitHub data?',
-    a: "We cache issue data briefly (a few hours) to avoid hammering the GitHub API on every page load. We store your GitHub username and a list of your starred repo names. That's it. No issue content is stored long-term.",
+    a: "We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.",
   },
   {
     q: "What if I don't have many starred repos?",
@@ -248,8 +248,8 @@ export default function LandingPage() {
             <span className="hcl-footer__copy">contrib.to — made by a developer, for developers</span>
             <div className="hcl-footer__links">
               <a href="https://github.com/EvannDev/contribto" className="hcl-footer__link">GitHub</a>
-              <a href="#" className="hcl-footer__link">Privacy</a>
-              <a href="https://github.com/EvannDev/contribto" className="hcl-footer__link">Source</a>
+              <a href="/privacy" className="hcl-footer__link">Privacy</a>
+              <a href="/terms" className="hcl-footer__link">Terms</a>
             </div>
           </div>
         </div>
