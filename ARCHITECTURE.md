@@ -308,12 +308,29 @@ Tu as la sécurité de typage d'un ORM, sans en avoir les défauts.
 ```go
 // api/internal/repo/repository.go
 type Repository interface {
+    // Users
+    GetUserByID(ctx context.Context, userID int64) (*domain.User, error)
     GetUserByGithubID(ctx context.Context, githubID int64) (*domain.User, error)
     UpsertUser(ctx context.Context, u *domain.User) error
+    UpdateUserToken(ctx context.Context, userID int64, encryptedToken []byte) error
+    UpdateUserSyncedAt(ctx context.Context, userID int64, t time.Time) error
+    DeleteUser(ctx context.Context, userID int64) error
+
+    // Repos
     UpsertRepo(ctx context.Context, r *domain.Repo) error
     GetReposToScan(ctx context.Context, olderThan time.Time, limit int) ([]domain.Repo, error)
-    GetOpenIssuesForUser(ctx context.Context, userID int64, limit int) ([]domain.Issue, error)
-    // ...
+    UpdateRepoScanned(ctx context.Context, repoID int64, etag string, t time.Time) error
+
+    // Stars
+    LinkUserToRepo(ctx context.Context, userID, repoID int64, starredAt *time.Time) error
+    GetUserStarredRepos(ctx context.Context, userID int64) ([]domain.Repo, error)
+
+    // Issues
+    UpsertIssue(ctx context.Context, issue *domain.Issue) error
+    MarkIssuesClosed(ctx context.Context, repoID int64, openGithubIDs []int64) error
+    GetOpenIssuesForUser(ctx context.Context, userID int64, limit, offset int) ([]domain.Issue, error)
+    GetOpenIssuesWithRepo(ctx context.Context, userID int64, sort string, limit, offset int) ([]domain.IssueWithRepo, error)
+    CountOpenIssuesForUser(ctx context.Context, userID int64) (int, error)
 }
 ```
 
@@ -341,33 +358,25 @@ Le code métier ne dépend que de `Repository`, jamais de `sqlc.Queries`.
 
 ### 6. ETags + conditional requests sur l'API GitHub
 
-**Pourquoi :**
-- GitHub renvoie `304 Not Modified` quand rien n'a changé — et **ces requêtes ne comptent PAS dans le rate limit**.
-- La majorité des repos ne change pas d'une heure à l'autre → on multiplie le rate limit effectif par 10x ou plus.
+> **Statut : non implémenté (Phase 2).** Le worker scanne actuellement sans ETags — chaque repo déclenche une vraie requête à chaque tick. La colonne `etag` existe dans le schéma et `UpdateRepoScanned` accepte le paramètre, mais le worker passe toujours `""` pour l'instant.
 
-**Implémentation :**
+**Pourquoi ce sera important :**
+- GitHub renvoie `304 Not Modified` quand rien n'a changé — et **ces requêtes ne comptent PAS dans le rate limit**.
+- La majorité des repos ne change pas d'une heure à l'autre → on multipliera le rate limit effectif par 10x ou plus.
+
+**Implémentation prévue (Phase 2) :**
+
+Récupérer l'ETag de la réponse via `go-github` :
 
 ```go
-// api/internal/github/client.go
-func (c *Client) FetchIssues(ctx context.Context, fullName, etag string) (issues []Issue, newEtag string, notModified bool, err error) {
-    req, _ := http.NewRequestWithContext(ctx, "GET",
-        fmt.Sprintf("https://api.github.com/repos/%s/issues?labels=good first issue&state=open", fullName), nil)
-    req.Header.Set("Authorization", "Bearer "+c.token)
-    req.Header.Set("Accept", "application/vnd.github+json")
-    if etag != "" {
-        req.Header.Set("If-None-Match", etag)
-    }
-
-    resp, err := c.http.Do(req)
-    if err != nil { return nil, "", false, err }
-    defer resp.Body.Close()
-
-    if resp.StatusCode == http.StatusNotModified {
-        return nil, etag, true, nil
-    }
-    // ... décoder le JSON, retourner le nouvel ETag
-    return issues, resp.Header.Get("ETag"), false, nil
+// Passer l'ETag via RequestOption, puis lire resp.Header.Get("ETag") sur la réponse
+opts := &gogithub.IssueListByRepoOptions{ /* ... */ }
+issues, resp, err := gh.Issues.ListByRepo(ctx, owner, repo, opts)
+if resp != nil && resp.StatusCode == http.StatusNotModified {
+    return nil, nil // rien n'a changé
 }
+newEtag := resp.Header.Get("ETag")
+// stocker newEtag en DB avec UpdateRepoScanned
 ```
 
 ---
@@ -533,21 +542,24 @@ app.Use(cors.New(cors.Config{
 }))
 
 // Routes publiques
-app.Post("/auth/github", handlers.AuthGitHub)  // OAuth : échange code → cookie session
-app.Post("/auth/logout", handlers.AuthLogout)  // Supprime le cookie session
+app.Post("/auth/github", h.PostAuthGitHub)  // OAuth : échange code → cookie session
+app.Post("/auth/logout", h.PostAuthLogout)  // Supprime le cookie session
+app.Get("/livez", healthcheck.New())         // Liveness probe
+app.Get("/readyz", healthcheck.New())        // Readiness probe
 
 // Routes protégées (RequireAuth middleware)
-api := app.Group("/", middleware.RequireAuth)
-api.Get("/me", handlers.GetMe)                 // Infos user connecté (login, github_id)
-api.Get("/issues", handlers.GetIssues)         // Issues GFI des repos starrés (paginées)
-api.Post("/sync-stars", handlers.SyncStars)    // Re-sync des stars GitHub
+protected := app.Group("/", httphandler.RequireAuth())
+protected.Get("/me", h.GetMe)                 // Infos user connecté (login, github_id)
+protected.Delete("/me", h.DeleteAccount)      // Supprime le compte et toutes les données associées
+protected.Get("/issues", h.GetIssues)         // Issues GFI des repos starrés (paginées, triées)
+protected.Post("/sync-stars", h.PostSyncStars) // Re-sync des stars GitHub
 
 app.Listen(":8080")
 ```
 
-**Sessions :** cookie httpOnly signé via `gorilla/securecookie`, pas de JWT. Fiber lit/écrit le cookie via `c.Cookie()` / `c.Cookies()`.
+**Sessions :** cookie httpOnly chiffré via le middleware Fiber `encryptcookie` (AES-GCM, clé `COOKIE_ENCRYPTION_KEY`). La valeur du cookie est l'`user_id` chiffré — stateless, pas de session côté serveur.
 
-**Pourquoi pas de JWT :** overkill ici, et la révocation est difficile. Un cookie signé stateless suffit pour du monolithe single-instance.
+**Pourquoi pas de JWT :** overkill ici, et la révocation est difficile. Un cookie chiffré stateless suffit pour du monolithe single-instance.
 
 ---
 
@@ -585,7 +597,7 @@ func Encrypt(key, plaintext []byte) ([]byte, error) {
 
 - **Cookies de session** : `HttpOnly`, `Secure`, `SameSite=Lax`.
 - **CORS** : whitelist stricte sur l'origine du front Vercel.
-- **Rate limiting** : sur les endpoints qui appellent GitHub côté user (refresh manuel notamment), via `golang.org/x/time/rate`.
+- **Rate limiting** : middleware global Fiber `limiter` — 120 requêtes/minute par IP sur tous les endpoints.
 - **Inputs HTTP** : valider strictement (taille, format) avant de les passer à la DB ou GitHub.
 - **Logs** : ne JAMAIS logger un token, même tronqué. `slog` avec convention : on log les `user_id`, jamais les credentials.
 

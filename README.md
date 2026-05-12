@@ -152,9 +152,11 @@ make lint           # Run all linters (Go + TS)
 |---|---|
 | `GITHUB_CLIENT_ID` | OAuth App client ID |
 | `GITHUB_CLIENT_SECRET` | OAuth App client secret |
-| `GITHUB_PAT` | Personal Access Token used by the scan worker |
-| `TOKEN_ENCRYPTION_KEY` | 32-byte hex key for AES-GCM encryption of user tokens |
-| `DB_PATH` | Path to the SQLite database file |
+| `GITHUB_WORKER_PAT` | Personal Access Token used by the scan worker (optional — worker disabled if unset) |
+| `TOKEN_ENCRYPTION_KEY` | Base64-encoded 32-byte key for AES-GCM encryption of user tokens |
+| `COOKIE_ENCRYPTION_KEY` | Key for Fiber's encrypted session cookies (required) |
+| `FRONTEND_ORIGIN` | Allowed CORS origin for the frontend (default: `http://localhost:3000`) |
+| `DB_PATH` | Path to the SQLite database file (default: `./app.db`) |
 | `PORT` | HTTP port (default: `8080`) |
 
 ### Frontend (`web/.env.local`)
@@ -171,7 +173,7 @@ make lint           # Run all linters (Go + TS)
 - **User GitHub tokens** are encrypted at rest using AES-GCM. Even if the database is leaked, tokens are not exploitable.
 - **Session cookies** are `HttpOnly`, `Secure`, and `SameSite=Lax`.
 - **CORS** is restricted to the Vercel frontend origin.
-- **Rate limiting** is applied on endpoints that trigger GitHub API calls.
+- **Rate limiting** is applied globally (120 requests/minute per IP via Fiber's limiter middleware).
 - No secrets are ever logged — not even truncated.
 
 ---

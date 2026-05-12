@@ -23,6 +23,7 @@ type Worker struct {
 	pat  string
 }
 
+// NewWorker creates a Worker that uses pat as the GitHub token for all issue scans.
 func NewWorker(r repo.Repository, gh *github.Client, pat string) *Worker {
 	return &Worker{repo: r, gh: gh, pat: pat}
 }

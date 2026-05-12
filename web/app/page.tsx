@@ -1,7 +1,5 @@
-'use client'
-
-import { useState, useEffect } from 'react'
 import { Logo } from '@/components/logo'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 // ── Data ──────────────────────────────────────────────────────
 
@@ -48,48 +46,54 @@ const WHY_CARDS = [
   }
 ]
 
-interface FAQItem { q: string; a: React.ReactNode }
+interface FAQItem { q: string; a: React.ReactNode; aText?: string }
 const FAQ: FAQItem[] = [
   {
     q: 'What GitHub permissions do you request?',
     a: <>We request <code>read:user</code> and the public starred repos scope only. We can&apos;t see your private repositories, your commits, your email, or anything else. You can revoke access from your GitHub settings at any time.</>,
+    aText: `We request read:user and the public starred repos scope only. We can't see your private repositories, your commits, your email, or anything else. You can revoke access from your GitHub settings at any time.`,
   },
   {
     q: 'Do you store my GitHub data?',
-    a: "We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.",
+    a: `We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.`,
+    aText: `We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.`,
   },
   {
-    q: "What if I don't have many starred repos?",
-    a: "The fewer stars you have, the more focused the results. With 10 starred repos, you'll see issues from those 10 projects specifically — which might actually be more useful than a firehose of 300.",
+    q: `What if I don't have many starred repos?`,
+    a: `The fewer stars you have, the more focused the results. With 10 starred repos, you'll see issues from those 10 projects specifically — which might actually be more useful than a firehose of 300.`,
+    aText: `The fewer stars you have, the more focused the results. With 10 starred repos, you'll see issues from those 10 projects specifically — which might actually be more useful than a firehose of 300.`,
   },
   {
     q: 'Is this free?',
-    a: "Yes. There's no pricing plan, no free tier limits, no “upgrade for more results.” It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.",
+    a: `Yes. There's no pricing plan, no free tier limits, no “upgrade for more results.” It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
+    aText: `Yes. There's no pricing plan, no free tier limits, no upgrade for more results. It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
   },
   {
     q: 'What counts as a “good first issue”?',
     a: <>We filter for issues with the <code>good first issue</code>, <code>good-first-issue</code>, <code>beginner-friendly</code>, or <code>help wanted</code> labels. We also filter out issues that are already assigned, closed, or older than 6 months.</>,
+    aText: 'We filter for issues with the “good first issue”, “good-first-issue”, “beginner-friendly”, or “help wanted” labels. We also filter out issues that are already assigned, closed, or older than 6 months.',
   },
 ]
 
 // ── Page ──────────────────────────────────────────────────────
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(item => ({
+    '@type': 'Question',
+    name: item.q,
+    acceptedAnswer: { '@type': 'Answer', text: item.aText ?? '' },
+  })),
+}
+
 export default function LandingPage() {
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    setDark(document.documentElement.getAttribute('data-theme') === 'dark')
-  }, [])
-
-  function toggleDark() {
-    const next = !dark
-    setDark(next)
-    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
-    localStorage.setItem('ct-theme', next ? 'dark' : 'light')
-  }
-
   return (
     <div className="hcl">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <style>{css}</style>
 
       {/* ── Nav ── */}
@@ -97,9 +101,7 @@ export default function LandingPage() {
         <div className="hcl-nav__inner">
           <Logo className="hcl-logo" iconSize={18} />
           <div className="hcl-nav__actions">
-            <button className="hcl-theme-btn" onClick={toggleDark} aria-label="Toggle dark mode">
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </button>
+            <ThemeToggle />
             <a href="/login" className="hcl-btn hcl-btn--primary">Sign in with GitHub</a>
           </div>
         </div>
@@ -288,22 +290,6 @@ function PlusIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
       <path d="M7.5 2v11M2 7.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function SunIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-      <path d="M7.5 1.5v1M7.5 12.5v1M1.5 7.5h-1M13.5 7.5h1M3.4 3.4l-.7-.7M11.6 11.6l.7.7M11.6 3.4l.7-.7M3.4 11.6l-.7.7M7.5 5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function MoonIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-      <path d="M2.9 8.5A5 5 0 007.5 13a5 5 0 005-5A5 5 0 007.5 3a5.3 5.3 0 00-1 .1A4 4 0 012.9 8.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

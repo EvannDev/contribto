@@ -18,6 +18,7 @@ type SQLiteRepo struct {
 	q  *dbsqlc.Queries
 }
 
+// NewSQLiteRepo wraps an open *sql.DB (see OpenDB) with the sqlc query layer.
 func NewSQLiteRepo(db *sql.DB) *SQLiteRepo {
 	return &SQLiteRepo{db: db, q: dbsqlc.New(db)}
 }

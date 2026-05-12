@@ -1,0 +1,376 @@
+openapi: "3.0.3"
+
+info:
+  title: Contrib.to API
+  version: "1.0.0"
+  description: |
+    Backend API for Contrib.to — surfaces Good First Issues from GitHub repos a user has starred.
+
+    **Auth:** all protected endpoints require a valid session cookie (`session`) set by `POST /auth/github`.
+    The cookie is encrypted with AES-GCM via Fiber's `encryptcookie` middleware and is `HttpOnly`,
+    `Secure`, `SameSite=Lax`, valid for 7 days.
+
+    **Rate limiting:** 120 requests per minute per IP (global).
+
+servers:
+  - url: https://api.contrib.to
+    description: Production
+  - url: http://localhost:8080
+    description: Local dev
+
+tags:
+  - name: auth
+    description: GitHub OAuth flow and session management
+  - name: user
+    description: Authenticated user operations
+  - name: issues
+    description: Good First Issues feed
+  - name: health
+    description: Liveness and readiness probes
+
+paths:
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+
+  /auth/github:
+    post:
+      operationId: postAuthGitHub
+      tags: [auth]
+      summary: Exchange a GitHub OAuth code for a session
+      description: |
+        Trades the authorization code received from GitHub OAuth for an access token,
+        fetches the GitHub user profile, encrypts and stores the token, then sets an
+        encrypted session cookie. Designed to be called by the frontend callback route.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  maxLength: 256
+                  description: GitHub OAuth authorization code from the redirect callback.
+                  example: "gho_abc123..."
+      responses:
+        "200":
+          description: Authentication successful. Session cookie is set.
+          headers:
+            Set-Cookie:
+              description: Encrypted session cookie (`session=<encrypted_user_id>`).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  login:
+                    type: string
+                    description: The authenticated user's GitHub login.
+                    example: "octocat"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      tags: [auth]
+      summary: End the current session
+      description: Clears the session cookie by setting it to expired. No auth required.
+      responses:
+        "200":
+          description: Session cleared.
+
+  # ── Health ─────────────────────────────────────────────────────────────────
+
+  /livez:
+    get:
+      operationId: getLiveness
+      tags: [health]
+      summary: Liveness probe
+      description: Returns 200 if the process is running. Used by systemd or load balancers.
+      responses:
+        "200":
+          description: Process is alive.
+
+  /readyz:
+    get:
+      operationId: getReadiness
+      tags: [health]
+      summary: Readiness probe
+      description: Returns 200 if the service is ready to accept traffic.
+      responses:
+        "200":
+          description: Service is ready.
+
+  # ── User ───────────────────────────────────────────────────────────────────
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [user]
+      summary: Get current user
+      description: Returns the GitHub login and numeric ID of the authenticated user.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Current user info.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      operationId: deleteMe
+      tags: [user]
+      summary: Delete account
+      description: |
+        Permanently deletes the authenticated user and all associated data
+        (starred repo links, issues). Cascade delete is handled at the DB level.
+        Clears the session cookie on success.
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Account deleted. Session cookie cleared.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Issues ─────────────────────────────────────────────────────────────────
+
+  /issues:
+    get:
+      operationId: getIssues
+      tags: [issues]
+      summary: List Good First Issues for starred repos
+      description: |
+        Returns open issues labeled "good first issue" from repositories the
+        authenticated user has starred. Issues are served from the local SQLite DB
+        (populated by the background scan worker, updated every hour per repo).
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of issues to return. Clamped to [1, 100].
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          description: Number of issues to skip (for pagination).
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: sort
+          in: query
+          description: Sort order for results.
+          schema:
+            type: string
+            enum: [updated_desc, updated_asc, created_desc, created_asc]
+            default: updated_desc
+      responses:
+        "200":
+          description: Paginated issue list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Issue"
+                  total:
+                    type: integer
+                    description: Total number of issues matching the user (ignores limit/offset).
+                    example: 87
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Stars ──────────────────────────────────────────────────────────────────
+
+  /sync-stars:
+    post:
+      operationId: postSyncStars
+      tags: [user]
+      summary: Re-sync starred repositories
+      description: |
+        Fetches the authenticated user's current starred repos from GitHub (paginated,
+        100 per page) and upserts them into the local DB. Also upserts the
+        `user_stars` link table and updates `users.last_synced_at`.
+
+        This is a synchronous call — it waits for all GitHub pagination to complete
+        before returning. Expect up to a few seconds for users with thousands of stars.
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Sync complete.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                    description: Number of starred repos upserted.
+                    example: 342
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "502":
+          description: GitHub API unreachable or returned an error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+# ── Components ────────────────────────────────────────────────────────────────
+
+components:
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: |
+        Encrypted session cookie set by `POST /auth/github`. The plaintext value
+        is the user's DB `id` as a decimal string, encrypted with AES-GCM via
+        Fiber's `encryptcookie` middleware (`COOKIE_ENCRYPTION_KEY`).
+
+  schemas:
+
+    Me:
+      type: object
+      properties:
+        login:
+          type: string
+          description: GitHub username.
+          example: "octocat"
+        github_id:
+          type: integer
+          format: int64
+          description: GitHub numeric user ID.
+          example: 583231
+
+    IssueRepo:
+      type: object
+      description: Repo metadata attached to each issue.
+      properties:
+        full_name:
+          type: string
+          description: GitHub repo full name in `owner/repo` format.
+          example: "golang/go"
+        language:
+          type: string
+          description: Primary programming language, or empty string if undetected.
+          example: "Go"
+        stars:
+          type: integer
+          description: Star count as of the last sync.
+          example: 124000
+        last_scanned_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the scan worker last fetched issues for this repo. Null if never scanned.
+          example: "2026-05-04T18:30:00Z"
+
+    Issue:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal DB id (not the GitHub issue number).
+          example: 1023
+        number:
+          type: integer
+          description: GitHub issue number within the repo.
+          example: 42
+        title:
+          type: string
+          example: "Add dark mode support"
+        url:
+          type: string
+          format: uri
+          description: Direct link to the issue on GitHub.
+          example: "https://github.com/golang/go/issues/42"
+        repo:
+          $ref: "#/components/schemas/IssueRepo"
+        labels:
+          type: array
+          items:
+            type: string
+          description: Label names on the issue.
+          example: ["good first issue", "help wanted"]
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Issue creation timestamp on GitHub.
+          example: "2026-04-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update timestamp on GitHub.
+          example: "2026-05-01T14:22:00Z"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+          example: "unauthorized"
+
+  responses:
+    BadRequest:
+      description: Invalid request body or query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Missing or invalid session cookie.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "unauthorized"
+
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "internal server error"
