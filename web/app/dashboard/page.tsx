@@ -15,7 +15,14 @@ interface Issue {
   created_at: string | null
   updated_at: string | null
 }
-interface Repo { name: string; lang: string; issues: number; stars: string }
+
+interface ExploreRepo {
+  full_name: string
+  description: string
+  language: string
+  stars: number
+  last_scanned_at: string | null
+}
 
 const LABEL_COLORS: Record<string, { bg: string; fg: string }> = {
   'good first issue': { bg: '#D1FAE5', fg: '#065F46' },
@@ -45,7 +52,7 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(days / 30)}mo ago`
 }
 
-type Tab = 'issues' | 'repos' | 'settings'
+type Tab = 'issues' | 'explore' | 'settings'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -128,7 +135,7 @@ export default function DashboardPage() {
         <header className="dash-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Logo className="header-logo" iconSize={18} />
-            {([['issues', 'Issues'], ['repos', 'Starred repos'], ['settings', 'Settings']] as [Tab, string][]).map(([id, label]) => (
+            {([['issues', 'Issues'], ['explore', 'Explore'], ['settings', 'Settings']] as [Tab, string][]).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -216,7 +223,7 @@ export default function DashboardPage() {
             </>
           )}
 
-          {activeTab === 'repos' && <ReposList issues={issues} />}
+          {activeTab === 'explore' && <ExplorePanel issues={issues} apiUrl={apiUrl} />}
           {activeTab === 'settings' && <SettingsPanel notif={notif} setNotif={setNotif} login={login} rescanning={rescanning} onRescan={async () => {
             setRescanning(true)
             await fetch(`${apiUrl}/sync-stars`, { method: 'POST', credentials: 'include' }).catch(() => {})
@@ -347,17 +354,15 @@ function formatStars(n: number) {
   return String(n)
 }
 
-type RepoItem = { name: string; lang: string; stars: number; issueCount: number; lastScannedAt: string | null }
-
-function RepoCard({ repo }: { repo: RepoItem }) {
-  const slash = repo.name.indexOf('/')
-  const owner = repo.name.slice(0, slash)
-  const name  = repo.name.slice(slash + 1)
+function ExploreRepoCard({ repo, gfiCount }: { repo: ExploreRepo; gfiCount: number }) {
+  const slash = repo.full_name.indexOf('/')
+  const owner = repo.full_name.slice(0, slash)
+  const name  = repo.full_name.slice(slash + 1)
   const [imgErr, setImgErr] = useState(false)
 
   return (
     <a
-      href={`https://github.com/${repo.name}`}
+      href={`https://github.com/${repo.full_name}`}
       target="_blank"
       rel="noopener noreferrer"
       className="repo-card"
@@ -381,54 +386,77 @@ function RepoCard({ repo }: { repo: RepoItem }) {
           <span className="repo-card__name">{name}</span>
         </div>
       </div>
+      {repo.description && (
+        <p className="repo-card__desc">{repo.description}</p>
+      )}
       <div className="repo-card__bottom">
         <div className="repo-card__chips">
-          {repo.lang && <span className="repo-card__chip">{repo.lang}</span>}
+          {repo.language && <span className="repo-card__chip">{repo.language}</span>}
           <span className="repo-card__stars-chip">
             <StarIcon size={10} />{formatStars(repo.stars)}
           </span>
         </div>
-        <span className="repo-card__badge">
-          {repo.issueCount} {repo.issueCount === 1 ? 'issue' : 'issues'}
-        </span>
+        {gfiCount > 0 && (
+          <span className="repo-card__badge">
+            {gfiCount} {gfiCount === 1 ? 'GFI' : 'GFIs'}
+          </span>
+        )}
       </div>
-      {repo.lastScannedAt && (
-        <span style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>scanned {relativeTime(repo.lastScannedAt)}</span>
+      {repo.last_scanned_at && (
+        <span style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>scanned {relativeTime(repo.last_scanned_at)}</span>
       )}
     </a>
   )
 }
 
-function ReposList({ issues }: { issues: Issue[] }) {
+function ExplorePanel({ issues, apiUrl }: { issues: Issue[]; apiUrl: string }) {
+  const [repos, setRepos] = useState<ExploreRepo[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<'issues' | 'stars' | 'name'>('issues')
+  const [langFilter, setLangFilter] = useState('All')
+  const [sortBy, setSortBy] = useState<'stars' | 'name' | 'gfi'>('stars')
 
-  const repos = useMemo(() => {
-    const map = new Map<string, RepoItem>()
-    for (const issue of issues) {
-      const key = issue.repo.full_name
-      const existing = map.get(key)
-      if (existing) {
-        existing.issueCount++
-      } else {
-        map.set(key, { name: key, lang: issue.repo.language, stars: issue.repo.stars, issueCount: 1, lastScannedAt: issue.repo.last_scanned_at })
-      }
+  useEffect(() => {
+    fetch(`${apiUrl}/repos`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() as Promise<{ repos: ExploreRepo[]; total: number }> : null)
+      .then(data => { if (data) setRepos(data.repos ?? []) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const gfiCountByRepo = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const iss of issues) {
+      map.set(iss.repo.full_name, (map.get(iss.repo.full_name) ?? 0) + 1)
     }
-    let list = Array.from(map.values())
-    if (search) list = list.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
-    if (sortBy === 'stars') return list.sort((a, b) => b.stars - a.stars)
-    if (sortBy === 'name') return list.sort((a, b) => a.name.localeCompare(b.name))
-    return list.sort((a, b) => b.issueCount - a.issueCount)
-  }, [issues, search, sortBy])
+    return map
+  }, [issues])
 
-  const totalIssues = repos.reduce((s, r) => s + r.issueCount, 0)
+  const languages = useMemo(
+    () => ['All', ...Array.from(new Set(repos.map(r => r.language).filter(Boolean))).sort()],
+    [repos]
+  )
+
+  const filtered = useMemo(() => {
+    let list = [...repos]
+    if (langFilter !== 'All') list = list.filter(r => r.language === langFilter)
+    if (search) list = list.filter(r => r.full_name.toLowerCase().includes(search.toLowerCase()) || r.description?.toLowerCase().includes(search.toLowerCase()))
+    if (sortBy === 'name') return list.sort((a, b) => a.full_name.localeCompare(b.full_name))
+    if (sortBy === 'gfi') return list.sort((a, b) => (gfiCountByRepo.get(b.full_name) ?? 0) - (gfiCountByRepo.get(a.full_name) ?? 0))
+    return list.sort((a, b) => b.stars - a.stars)
+  }, [repos, langFilter, search, sortBy, gfiCountByRepo])
+
+  const totalGFI = useMemo(() => filtered.reduce((s, r) => s + (gfiCountByRepo.get(r.full_name) ?? 0), 0), [filtered, gfiCountByRepo])
 
   return (
     <main className="repos-main">
       <div className="repos-header">
         <div>
-          <div className="repos-title">Starred repositories</div>
-          <div className="repos-subtitle">{repos.length} repos · {totalIssues} open issues</div>
+          <div className="repos-title">Explore repositories</div>
+          <div className="repos-subtitle">
+            {loading ? 'Loading…' : `${filtered.length} repos${totalGFI > 0 ? ` · ${totalGFI} open GFIs` : ''}`}
+          </div>
         </div>
         <div className="repos-controls">
           <div style={{ position: 'relative' }}>
@@ -436,32 +464,43 @@ function ReposList({ issues }: { issues: Issue[] }) {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Filter repos…"
+              placeholder="Search repos…"
               className="repos-search"
             />
           </div>
           <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as 'issues' | 'stars' | 'name')}
+            value={langFilter}
+            onChange={e => setLangFilter(e.target.value)}
             className="repos-sort-select"
           >
-            <option value="issues">Most issues</option>
+            {languages.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as 'stars' | 'name' | 'gfi')}
+            className="repos-sort-select"
+          >
             <option value="stars">Most stars</option>
+            <option value="gfi">Most GFIs</option>
             <option value="name">Name A–Z</option>
           </select>
         </div>
       </div>
 
-      {repos.length === 0 ? (
+      {loading ? (
+        <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--fg-subtle)' }}>Loading…</div>
+      ) : filtered.length === 0 ? (
         <div className="repos-empty">
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-default)', marginBottom: 6 }}>
-            {search ? 'No repos match your search' : 'No repos found'}
+            {search || langFilter !== 'All' ? 'No repos match your filters' : 'No starred repos found'}
           </div>
-          {search && <button onClick={() => setSearch('')} className="secondary-btn">Clear search</button>}
+          {(search || langFilter !== 'All') && (
+            <button onClick={() => { setSearch(''); setLangFilter('All') }} className="secondary-btn">Clear filters</button>
+          )}
         </div>
       ) : (
         <div className="repos-grid">
-          {repos.map(r => <RepoCard key={r.name} repo={r} />)}
+          {filtered.map(r => <ExploreRepoCard key={r.full_name} repo={r} gfiCount={gfiCountByRepo.get(r.full_name) ?? 0} />)}
         </div>
       )}
     </main>
@@ -581,7 +620,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 
 function TabIcon({ id }: { id: Tab }) {
   if (id === 'issues') return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="1" /></svg>
-  if (id === 'repos') return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+  if (id === 'explore') return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
   return <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
 }
 
@@ -809,6 +848,10 @@ const css = `
     font-size: 13px; font-weight: 600; color: var(--fg-default);
     font-family: var(--font-mono, monospace);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .repo-card__desc {
+    font-size: 12px; color: var(--fg-muted); line-height: 1.45; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .repo-card__bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .repo-card__chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

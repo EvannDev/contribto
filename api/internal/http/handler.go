@@ -34,6 +34,14 @@ type issueDTO struct {
 	UpdatedAt *time.Time   `json:"updated_at"`
 }
 
+type starredRepoDTO struct {
+	FullName      string     `json:"full_name"`
+	Description   string     `json:"description"`
+	Language      string     `json:"language"`
+	Stars         int        `json:"stars"`
+	LastScannedAt *time.Time `json:"last_scanned_at"`
+}
+
 // Handler holds the dependencies shared across all HTTP handlers.
 type Handler struct {
 	repo          repo.Repository
@@ -221,6 +229,32 @@ func (h *Handler) DeleteAccount(c fiber.Ctx) error {
 	})
 	slog.Info("account deleted", "userID", userID)
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// GetRepos handles GET /repos (auth required).
+// Returns all repositories starred by the current user.
+func (h *Handler) GetRepos(c fiber.Ctx) error {
+	userID := UserIDFromContext(c)
+	ctx := c.Context()
+
+	repos, err := h.repo.GetUserStarredRepos(ctx, userID)
+	if err != nil {
+		slog.Error("get user starred repos", "userID", userID, "err", err)
+		return fiber.NewError(http.StatusInternalServerError, "internal error")
+	}
+
+	dtos := make([]starredRepoDTO, len(repos))
+	for i, r := range repos {
+		dtos[i] = starredRepoDTO{
+			FullName:      r.FullName,
+			Description:   r.Description,
+			Language:      r.Language,
+			Stars:         r.StarsCount,
+			LastScannedAt: r.LastScannedAt,
+		}
+	}
+
+	return c.JSON(fiber.Map{"repos": dtos, "total": len(repos)})
 }
 
 // PostSyncStars handles POST /sync-stars (auth required).

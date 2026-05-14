@@ -159,8 +159,8 @@ func (c *Client) GetRepoIssues(ctx context.Context, token, fullName string) ([]G
 
 	gh := apiClient(ctx, token)
 	opts := &gogithub.IssueListByRepoOptions{
-		State:  "open",
-		Labels: []string{"good first issue"},
+		State:       "open",
+		Labels:      []string{"good first issue"},
 		ListOptions: gogithub.ListOptions{PerPage: 100},
 	}
 

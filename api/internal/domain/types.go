@@ -24,13 +24,13 @@ type Repo struct {
 }
 
 type IssueWithRepo struct {
-	ID           int64
-	Number       int
-	Title        string
-	URL          string
-	Labels       []string
-	CreatedAt    *time.Time
-	UpdatedAt    *time.Time
+	ID                int64
+	Number            int
+	Title             string
+	URL               string
+	Labels            []string
+	CreatedAt         *time.Time
+	UpdatedAt         *time.Time
 	RepoFullName      string
 	RepoLanguage      string
 	RepoStars         int
