@@ -141,6 +141,7 @@ func main() {
 	protected.Get("/me", h.GetMe)
 	protected.Delete("/me", h.DeleteAccount)
 	protected.Get("/issues", h.GetIssues)
+	protected.Get("/repos", h.GetRepos)
 	protected.Post("/sync-stars", h.PostSyncStars)
 
 	slog.Info("starting", "port", cfg.Port)
