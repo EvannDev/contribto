@@ -16,13 +16,6 @@ interface Issue {
   updated_at: string | null
 }
 
-interface ExploreRepo {
-  full_name: string
-  description: string
-  language: string
-  stars: number
-  last_scanned_at: string | null
-}
 
 const LABEL_COLORS: Record<string, { bg: string; fg: string }> = {
   'good first issue': { bg: '#D1FAE5', fg: '#065F46' },
@@ -223,7 +216,7 @@ export default function DashboardPage() {
             </>
           )}
 
-          {activeTab === 'explore' && <ExplorePanel issues={issues} apiUrl={apiUrl} />}
+          {activeTab === 'explore' && <ExplorePanel issues={issues} loading={loading} />}
           {activeTab === 'settings' && <SettingsPanel notif={notif} setNotif={setNotif} login={login} rescanning={rescanning} onRescan={async () => {
             setRescanning(true)
             await fetch(`${apiUrl}/sync-stars`, { method: 'POST', credentials: 'include' }).catch(() => {})
@@ -349,113 +342,39 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   )
 }
 
-function formatStars(n: number) {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
-
-function ExploreRepoCard({ repo, gfiCount }: { repo: ExploreRepo; gfiCount: number }) {
-  const slash = repo.full_name.indexOf('/')
-  const owner = repo.full_name.slice(0, slash)
-  const name  = repo.full_name.slice(slash + 1)
-  const [imgErr, setImgErr] = useState(false)
-
-  return (
-    <a
-      href={`https://github.com/${repo.full_name}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="repo-card"
-    >
-      <div className="repo-card__top">
-        <div className="repo-card__avatar">
-          {!imgErr
-            ? <Image
-                src={`https://github.com/${owner}.png?size=64`}
-                alt={owner}
-                width={32}
-                height={32}
-                className="repo-card__avatar-img"
-                onError={() => setImgErr(true)}
-              />
-            : <span className="repo-card__avatar-letter">{name[0].toUpperCase()}</span>
-          }
-        </div>
-        <div className="repo-card__meta">
-          <span className="repo-card__owner">{owner}</span>
-          <span className="repo-card__name">{name}</span>
-        </div>
-      </div>
-      {repo.description && (
-        <p className="repo-card__desc">{repo.description}</p>
-      )}
-      <div className="repo-card__bottom">
-        <div className="repo-card__chips">
-          {repo.language && <span className="repo-card__chip">{repo.language}</span>}
-          <span className="repo-card__stars-chip">
-            <StarIcon size={10} />{formatStars(repo.stars)}
-          </span>
-        </div>
-        {gfiCount > 0 && (
-          <span className="repo-card__badge">
-            {gfiCount} {gfiCount === 1 ? 'GFI' : 'GFIs'}
-          </span>
-        )}
-      </div>
-      {repo.last_scanned_at && (
-        <span style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>scanned {relativeTime(repo.last_scanned_at)}</span>
-      )}
-    </a>
-  )
-}
-
-function ExplorePanel({ issues, apiUrl }: { issues: Issue[]; apiUrl: string }) {
-  const [repos, setRepos] = useState<ExploreRepo[]>([])
-  const [loading, setLoading] = useState(true)
+function ExplorePanel({ issues, loading }: { issues: Issue[]; loading: boolean }) {
   const [search, setSearch] = useState('')
   const [langFilter, setLangFilter] = useState('All')
-  const [sortBy, setSortBy] = useState<'stars' | 'name' | 'gfi'>('stars')
-
-  useEffect(() => {
-    fetch(`${apiUrl}/repos`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() as Promise<{ repos: ExploreRepo[]; total: number }> : null)
-      .then(data => { if (data) setRepos(data.repos ?? []) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const gfiCountByRepo = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const iss of issues) {
-      map.set(iss.repo.full_name, (map.get(iss.repo.full_name) ?? 0) + 1)
-    }
-    return map
-  }, [issues])
+  const [sortBy, setSortBy] = useState<'updated_desc' | 'updated_asc' | 'created_desc' | 'created_asc'>('updated_desc')
 
   const languages = useMemo(
-    () => ['All', ...Array.from(new Set(repos.map(r => r.language).filter(Boolean))).sort()],
-    [repos]
+    () => ['All', ...Array.from(new Set(issues.map(i => i.repo.language).filter(Boolean))).sort()],
+    [issues]
   )
 
   const filtered = useMemo(() => {
-    let list = [...repos]
-    if (langFilter !== 'All') list = list.filter(r => r.language === langFilter)
-    if (search) list = list.filter(r => r.full_name.toLowerCase().includes(search.toLowerCase()) || r.description?.toLowerCase().includes(search.toLowerCase()))
-    if (sortBy === 'name') return list.sort((a, b) => a.full_name.localeCompare(b.full_name))
-    if (sortBy === 'gfi') return list.sort((a, b) => (gfiCountByRepo.get(b.full_name) ?? 0) - (gfiCountByRepo.get(a.full_name) ?? 0))
-    return list.sort((a, b) => b.stars - a.stars)
-  }, [repos, langFilter, search, sortBy, gfiCountByRepo])
-
-  const totalGFI = useMemo(() => filtered.reduce((s, r) => s + (gfiCountByRepo.get(r.full_name) ?? 0), 0), [filtered, gfiCountByRepo])
+    let list = [...issues]
+    if (langFilter !== 'All') list = list.filter(i => i.repo.language === langFilter)
+    if (search) list = list.filter(i =>
+      i.title.toLowerCase().includes(search.toLowerCase()) ||
+      i.repo.full_name.toLowerCase().includes(search.toLowerCase())
+    )
+    switch (sortBy) {
+      case 'updated_asc':  list.sort((a, b) => (a.updated_at ?? '').localeCompare(b.updated_at ?? '')); break
+      case 'created_desc': list.sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')); break
+      case 'created_asc':  list.sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? '')); break
+      default:             list.sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
+    }
+    return list
+  }, [issues, langFilter, search, sortBy])
 
   return (
     <main className="repos-main">
       <div className="repos-header">
         <div>
-          <div className="repos-title">Explore repositories</div>
+          <div className="repos-title">Explore issues</div>
           <div className="repos-subtitle">
-            {loading ? 'Loading…' : `${filtered.length} repos${totalGFI > 0 ? ` · ${totalGFI} open GFIs` : ''}`}
+            {loading ? 'Loading…' : `${filtered.length} of ${issues.length} issues`}
           </div>
         </div>
         <div className="repos-controls">
@@ -464,25 +383,22 @@ function ExplorePanel({ issues, apiUrl }: { issues: Issue[]; apiUrl: string }) {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search repos…"
+              placeholder="Search issues…"
               className="repos-search"
             />
           </div>
-          <select
-            value={langFilter}
-            onChange={e => setLangFilter(e.target.value)}
-            className="repos-sort-select"
-          >
+          <select value={langFilter} onChange={e => setLangFilter(e.target.value)} className="repos-sort-select">
             {languages.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
           <select
             value={sortBy}
-            onChange={e => setSortBy(e.target.value as 'stars' | 'name' | 'gfi')}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
             className="repos-sort-select"
           >
-            <option value="stars">Most stars</option>
-            <option value="gfi">Most GFIs</option>
-            <option value="name">Name A–Z</option>
+            <option value="updated_desc">Updated: newest</option>
+            <option value="updated_asc">Updated: oldest</option>
+            <option value="created_desc">Created: newest</option>
+            <option value="created_asc">Created: oldest</option>
           </select>
         </div>
       </div>
@@ -490,17 +406,10 @@ function ExplorePanel({ issues, apiUrl }: { issues: Issue[]; apiUrl: string }) {
       {loading ? (
         <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: 13, color: 'var(--fg-subtle)' }}>Loading…</div>
       ) : filtered.length === 0 ? (
-        <div className="repos-empty">
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-default)', marginBottom: 6 }}>
-            {search || langFilter !== 'All' ? 'No repos match your filters' : 'No starred repos found'}
-          </div>
-          {(search || langFilter !== 'All') && (
-            <button onClick={() => { setSearch(''); setLangFilter('All') }} className="secondary-btn">Clear filters</button>
-          )}
-        </div>
+        <EmptyState onReset={() => { setSearch(''); setLangFilter('All') }} />
       ) : (
-        <div className="repos-grid">
-          {filtered.map(r => <ExploreRepoCard key={r.full_name} repo={r} gfiCount={gfiCountByRepo.get(r.full_name) ?? 0} />)}
+        <div className="issues-grid">
+          {filtered.map(issue => <IssueCard key={issue.id} issue={issue} />)}
         </div>
       )}
     </main>
@@ -848,10 +757,6 @@ const css = `
     font-size: 13px; font-weight: 600; color: var(--fg-default);
     font-family: var(--font-mono, monospace);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .repo-card__desc {
-    font-size: 12px; color: var(--fg-muted); line-height: 1.45; margin: 0;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .repo-card__bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .repo-card__chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
