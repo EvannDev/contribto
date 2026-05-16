@@ -38,22 +38,24 @@
   --blue-700:  #1D4ED8;
 }
 
-/* ── Landing page design tokens (rust / warm palette) ──────── */
+/* ── Landing page design tokens (Direction 3 — Warm Humanist) ── */
 :root {
-  --hc-bg:           #F8F6F1;
+  --hc-bg:           #F9F6EF;
   --hc-bg-subtle:    #F0EDE6;
   --hc-bg-muted:     #E8E4DC;
-  --hc-bg-overlay:   rgba(248,246,241,0.92);
-  --hc-text:         #1C1917;
+  --hc-bg-overlay:   rgba(249,246,239,0.92);
+  --hc-text:         #2B2520;
   --hc-text-muted:   #6B6560;
   --hc-text-subtle:  #9C9690;
-  --hc-border:       #DDD9D1;
+  --hc-border:       #E4DDD2;
   --hc-border-strong:#C8C3B8;
-  --hc-border-subtle:#E8E4DC;
+  --hc-border-subtle:#EBE5DD;
   --hc-accent:       #C2540A;
   --hc-accent-hover: #A8470A;
   --hc-accent-subtle:#FEF3E2;
   --hc-accent-border:#F5C89A;
+  --hc-sage:         #5A7A5E;
+  --hc-sage-subtle:  #EBF2EC;
 }
 
 [data-theme="dark"] {
