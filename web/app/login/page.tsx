@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { Logo } from '@/components/logo'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    setDark(document.documentElement.getAttribute('data-theme') === 'dark')
-  }, [])
+  const [dark, setDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark'
+  )
 
   function toggleDark() {
     const next = !dark
@@ -30,10 +29,10 @@ export default function LoginPage() {
       <div className="login-page">
         {/* Back nav */}
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <a href="/" className="back-btn">
+          <Link href="/" className="back-btn">
             <ChevronLeftIcon />
             Back
-          </a>
+          </Link>
           <button className="theme-btn" onClick={toggleDark} aria-label="Toggle dark mode">
             {dark ? <SunIcon /> : <MoonIcon />}
           </button>

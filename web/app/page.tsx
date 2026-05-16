@@ -27,7 +27,30 @@ const PREVIEW_ISSUES: PreviewIssue[] = [
   },
 ]
 
-const WHY_CARDS = [
+interface HowStep { num: string; title: string; body: React.ReactNode; annotation: string }
+
+const HOW_STEPS: HowStep[] = [
+  {
+    num: '01',
+    title: 'Sign in with GitHub',
+    body: <>OAuth only. We request the minimum scope needed — read your public starred repos. We don&apos;t touch your private repos, your code, or your email.</>,
+    annotation: 'This is the only moment we touch GitHub on your behalf. After that, we work from our own cache of issue metadata.',
+  },
+  {
+    num: '02',
+    title: 'We scan your stars',
+    body: <>We fetch issues from the repos you&apos;ve starred, filtering to anything labeled <code className="hcl-code">good first issue</code> or <code className="hcl-code">beginner-friendly</code>. No open issues older than 6 months.</>,
+    annotation: 'We keep the list short on purpose. A filtered set of 20 relevant issues beats a firehose of 500 random ones.',
+  },
+  {
+    num: '03',
+    title: 'Browse and filter',
+    body: <>Sort by recency, filter by language or label. Click an issue to open it directly on GitHub. That&apos;s where the real work happens — we just get you there.</>,
+    annotation: 'The filter state persists across visits. Come back tomorrow and your view is right where you left it.',
+  },
+]
+
+const WHY_QUOTES = [
   {
     head: "You've starred 200 repos and never opened a PR",
     body: "Your GitHub stars are a record of projects you find interesting. Contrib.to turns that interest into actionable contribution opportunities, from repos you already trust.",
@@ -43,7 +66,7 @@ const WHY_CARDS = [
   {
     head: "This is a small project, not a startup",
     body: "Contrib.to is a tool built by a developer who had the same problem. It's not VC-backed, not 'AI-powered', not going to upsell you a Pro plan. It just does one thing, hopefully well.",
-  }
+  },
 ]
 
 interface FAQItem { q: string; a: React.ReactNode; aText?: string }
@@ -65,13 +88,13 @@ const FAQ: FAQItem[] = [
   },
   {
     q: 'Is this free?',
-    a: `Yes. There's no pricing plan, no free tier limits, no “upgrade for more results.” It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
+    a: `Yes. There's no pricing plan, no free tier limits, no "upgrade for more results." It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
     aText: `Yes. There's no pricing plan, no free tier limits, no upgrade for more results. It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
   },
   {
-    q: 'What counts as a “good first issue”?',
+    q: 'What counts as a "good first issue"?',
     a: <>We filter for issues with the <code>good first issue</code>, <code>good-first-issue</code>, <code>beginner-friendly</code>, or <code>help wanted</code> labels. We also filter out issues that are already assigned, closed, or older than 6 months.</>,
-    aText: 'We filter for issues with the “good first issue”, “good-first-issue”, “beginner-friendly”, or “help wanted” labels. We also filter out issues that are already assigned, closed, or older than 6 months.',
+    aText: 'We filter for issues with the "good first issue", "good-first-issue", "beginner-friendly", or "help wanted" labels. We also filter out issues that are already assigned, closed, or older than 6 months.',
   },
 ]
 
@@ -110,23 +133,30 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section className="hcl-hero">
         <div className="hcl-container">
-          <p className="hcl-eyebrow">// good first issues, from repos you actually care about</p>
+          <p className="hcl-eyebrow">{'// good first issues, from repos you actually care about'}</p>
           <h1 className="hcl-headline">
             Stop hunting.<br />
-            Start <em>contributing</em>.
+            Start{' '}
+            <span className="hcl-underline-wrap">
+              <em>contributing</em>
+              <WobblyUnderline />
+            </span>.
           </h1>
           <p className="hcl-sub">
             We look at the GitHub repos you&apos;ve already starred and surface beginner-friendly issues from them.
             That&apos;s it. No algorithm, no recommendations engine, no &ldquo;AI-curated&rdquo; anything.
           </p>
           <div className="hcl-cta-row">
-            <a href="/login" className="hcl-btn hcl-btn--github">
-              <GithubIcon />
-              Sign in with GitHub
-            </a>
+            <div className="hcl-cta-with-arrow">
+              <CtaArrow />
+              <a href="/login" className="hcl-btn hcl-btn--github">
+                <GithubIcon />
+                Sign in with GitHub
+              </a>
+            </div>
             <a href="/dashboard" className="hcl-btn hcl-btn--outline">See a demo</a>
           </div>
-          <p className="hcl-hero-note">// free. no credit card. we only read your public stars.</p>
+          <p className="hcl-hero-note">{'// free. no credit card. we only read your public stars.'}</p>
 
           {/* Preview window */}
           <div className="hcl-preview">
@@ -173,49 +203,54 @@ export default function LandingPage() {
       {/* ── How it works ── */}
       <section className="hcl-section">
         <div className="hcl-container">
-          <p className="hcl-section-label">// how it works</p>
-          <h2 className="hcl-section-heading">Three steps, no magic.</h2>
+          <p className="hcl-section-label">{'// how it works'}</p>
+          <h2 className="hcl-section-heading">
+            Three steps, no magic.
+          </h2>
           <p className="hcl-section-sub">We&apos;re not doing anything fancy. The value is in the curation, not the technology.</p>
-          <div className="hcl-steps">
-            <div className="hcl-step">
-              <p className="hcl-step__num">01</p>
-              <p className="hcl-step__title">Sign in with GitHub</p>
-              <p className="hcl-step__body">OAuth only. We request the minimum scope needed — read your public starred repos. We don&apos;t touch your private repos, your code, or your email.</p>
-            </div>
-            <div className="hcl-step">
-              <p className="hcl-step__num">02</p>
-              <p className="hcl-step__title">We scan your stars</p>
-              <p className="hcl-step__body">We fetch issues from the repos you&apos;ve starred, filtering to anything labeled <code className="hcl-code">good first issue</code> or <code className="hcl-code">beginner-friendly</code>. No open issues older than 6 months.</p>
-            </div>
-            <div className="hcl-step">
-              <p className="hcl-step__num">03</p>
-              <p className="hcl-step__title">Browse and filter</p>
-              <p className="hcl-step__body">Sort by recency, filter by language or label. Click an issue to open it directly on GitHub. That&apos;s where the real work happens — we just get you there.</p>
-            </div>
-          </div>
+          <ol className="hcl-steps-list">
+            {HOW_STEPS.map((step) => (
+              <li key={step.num} className="hcl-step-row">
+                <div className="hcl-step-main">
+                  <span className="hcl-step__num" aria-hidden="true">{step.num}</span>
+                  <div>
+                    <p className="hcl-step__title">{step.title}</p>
+                    <p className="hcl-step__body">{step.body}</p>
+                  </div>
+                </div>
+                <p className="hcl-step-annotation">{step.annotation}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
       {/* ── Who it's for ── */}
       <section className="hcl-section">
         <div className="hcl-container">
-          <p className="hcl-section-label">// who this is for</p>
-          <h2 className="hcl-section-heading">For developers who want to contribute<br />but don&apos;t know where to start.</h2>
-          <div className="hcl-why-grid">
-            {WHY_CARDS.map((card, i) => (
-              <div key={i} className="hcl-why-card">
-                <p className="hcl-why-card__head">{card.head}</p>
-                <p className="hcl-why-card__body">{card.body}</p>
-              </div>
+          <p className="hcl-section-label">{'// who this is for'}</p>
+          <h2 className="hcl-section-heading">
+            For developers who want to contribute<br />
+            but don&apos;t know where to start.
+          </h2>
+          <ul className="hcl-pullquote-list">
+            {WHY_QUOTES.map((q, i) => (
+              <li key={i} className="hcl-pullquote">
+                <p className="hcl-pullquote__head">
+                  <AsteriskMark />
+                  {q.head}
+                </p>
+                <p className="hcl-pullquote__body">{q.body}</p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* ── FAQ ── */}
       <section className="hcl-section">
         <div className="hcl-container">
-          <p className="hcl-section-label">// questions</p>
+          <p className="hcl-section-label">{'// questions'}</p>
           <h2 className="hcl-section-heading">Honest answers.</h2>
           <div className="hcl-faq">
             {FAQ.map((item, i) => (
@@ -257,6 +292,71 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+// ── SVG Flourishes ────────────────────────────────────────────
+
+function WobblyUnderline() {
+  return (
+    <svg
+      className="hcl-wobbly-underline"
+      viewBox="0 0 200 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 9 C20 4, 40 11, 60 7 C80 3, 100 10, 120 6 C140 2, 160 9, 180 5 C190 3, 196 7, 198 9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.7"
+      />
+    </svg>
+  )
+}
+
+function CtaArrow() {
+  return (
+    <svg
+      className="hcl-cta-arrow"
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 8 C10 6, 28 10, 34 26"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.5"
+      />
+      <path
+        d="M28 22 L34 26 L30 32"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+      />
+    </svg>
+  )
+}
+
+function AsteriskMark() {
+  return (
+    <svg
+      className="hcl-asterisk"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path d="M8 2v12M2 8h12M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -371,11 +471,33 @@ const css = `
     color: var(--hc-text-subtle); margin-bottom: 20px;
   }
   .hcl-headline {
+    font-family: var(--font-serif, Georgia, serif);
     font-size: clamp(36px, 5vw, 60px);
-    font-weight: 600; line-height: 1.1; letter-spacing: -0.03em;
+    font-weight: 600; font-style: italic;
+    line-height: 1.1; letter-spacing: -0.02em;
     color: var(--hc-text); max-width: 700px; margin-bottom: 20px;
   }
   .hcl-headline em { font-style: normal; color: var(--hc-accent); }
+
+  /* Wobbly underline flourish */
+  .hcl-underline-wrap { position: relative; display: inline-block; }
+  .hcl-wobbly-underline {
+    position: absolute; bottom: -6px; left: 0;
+    width: 100%; height: 12px;
+    color: var(--hc-accent);
+    pointer-events: none;
+  }
+
+  /* CTA arrow flourish */
+  .hcl-cta-with-arrow { position: relative; display: inline-flex; }
+  .hcl-cta-arrow {
+    position: absolute; top: -28px; left: -8px;
+    width: 40px; height: 40px;
+    color: var(--hc-text-subtle);
+    pointer-events: none;
+    transform: rotate(-15deg);
+  }
+
   .hcl-sub {
     font-size: 17px; color: var(--hc-text-muted);
     max-width: 480px; line-height: 1.65; margin-bottom: 32px;
@@ -438,11 +560,11 @@ const css = `
     padding: 2px 7px; border-radius: 9999px; border: 1px solid; white-space: nowrap;
   }
   .hcl-badge--lang { background: var(--hc-bg-subtle); border-color: var(--hc-border); color: var(--hc-text-muted); }
-  .hcl-badge--gfi  { background: #edf7f0; border-color: #2d7a45; color: #2d7a45; }
+  .hcl-badge--gfi  { background: var(--hc-sage-subtle, #EBF2EC); border-color: var(--hc-sage, #5A7A5E); color: var(--hc-sage, #5A7A5E); }
   .hcl-badge--blue { background: #eff6ff; border-color: #1e5fad; color: #1e5fad; }
   .hcl-badge--orange { background: var(--hc-accent-subtle); border-color: var(--hc-accent-border); color: var(--hc-accent); }
   .hcl-badge--purple { background: #f3f0fb; border-color: #7c3aed; color: #6d28d9; }
-  [data-theme="dark"] .hcl-badge--gfi    { background: #0a1f12; border-color: #4ade80; color: #4ade80; }
+  [data-theme="dark"] .hcl-badge--gfi    { background: #0d1f12; border-color: #6aaa72; color: #6aaa72; }
   [data-theme="dark"] .hcl-badge--blue   { background: #0a1228; border-color: #60a5fa; color: #60a5fa; }
   [data-theme="dark"] .hcl-badge--purple { background: #180e2a; border-color: #a78bfa; color: #a78bfa; }
 
@@ -461,31 +583,66 @@ const css = `
     color: var(--hc-text-subtle); margin-bottom: 16px;
   }
   .hcl-section-heading {
-    font-size: 30px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2;
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25;
     color: var(--hc-text); margin-bottom: 12px;
   }
   .hcl-section-sub { font-size: 15px; color: var(--hc-text-muted); max-width: 480px; line-height: 1.65; }
 
-  /* Steps */
-  .hcl-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
-  .hcl-step { padding: 24px; border: 1px solid var(--hc-border); border-radius: 10px; background: var(--hc-bg); }
+  /* How it works — annotated vertical list */
+  .hcl-steps-list {
+    list-style: none; padding: 0; margin: 40px 0 0;
+    display: flex; flex-direction: column;
+  }
+  .hcl-step-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px 48px;
+    padding: 32px 0;
+    border-top: 1px solid var(--hc-border);
+    align-items: start;
+  }
+  .hcl-step-row:last-child { border-bottom: 1px solid var(--hc-border); }
+  .hcl-step-main { display: flex; gap: 20px; align-items: flex-start; }
   .hcl-step__num {
     font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 500;
-    color: var(--hc-accent); letter-spacing: 0.04em; margin-bottom: 16px;
+    color: var(--hc-accent); letter-spacing: 0.04em;
+    flex-shrink: 0; padding-top: 3px;
   }
-  .hcl-step__title { font-size: 15px; font-weight: 600; color: var(--hc-text); margin-bottom: 8px; }
+  .hcl-step__title {
+    font-size: 16px; font-weight: 600; color: var(--hc-text); margin-bottom: 8px; line-height: 1.3;
+  }
   .hcl-step__body { font-size: 13px; color: var(--hc-text-muted); line-height: 1.65; }
+  .hcl-step-annotation {
+    font-size: 13px; color: var(--hc-text-subtle); line-height: 1.7;
+    border-left: 2px solid var(--hc-border); padding-left: 20px;
+    margin: 0;
+  }
   .hcl-code {
     font-family: var(--font-mono, monospace); font-size: 11px;
     background: var(--hc-bg-subtle); border: 1px solid var(--hc-border);
     border-radius: 3px; padding: 1px 5px; color: var(--hc-text-muted);
   }
 
-  /* Why grid */
-  .hcl-why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 40px; }
-  .hcl-why-card { padding: 24px; border: 1px solid var(--hc-border); border-radius: 10px; background: var(--hc-bg); }
-  .hcl-why-card__head { font-size: 13px; font-weight: 600; color: var(--hc-text); margin-bottom: 8px; }
-  .hcl-why-card__body { font-size: 13px; color: var(--hc-text-muted); line-height: 1.65; }
+  /* Who it's for — pull-quote list */
+  .hcl-pullquote-list {
+    list-style: none; padding: 0; margin: 40px 0 0;
+    display: flex; flex-direction: column; gap: 36px;
+  }
+  .hcl-pullquote { max-width: 680px; }
+  .hcl-pullquote__head {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 17px; font-weight: 600; color: var(--hc-text);
+    margin-bottom: 10px; line-height: 1.3;
+    font-family: var(--font-serif, Georgia, serif);
+  }
+  .hcl-pullquote__body { font-size: 15px; color: var(--hc-text-muted); line-height: 1.7; }
+
+  /* Asterisk flourish */
+  .hcl-asterisk {
+    width: 14px; height: 14px; flex-shrink: 0;
+    color: var(--hc-accent); margin-top: 3px;
+  }
 
   /* FAQ */
   .hcl-faq { margin-top: 32px; }
@@ -509,9 +666,10 @@ const css = `
   }
 
   /* CTA strip */
-  .hcl-cta-strip { padding: 64px 0; border-bottom: 1px solid var(--hc-border-subtle); text-align: center; }
+  .hcl-cta-strip { padding: 64px 0; border-bottom: 1px solid var(--hc-border-subtle); text-align: left; }
   .hcl-cta-strip__heading {
-    font-size: 30px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 12px; color: var(--hc-text);
+    font-family: var(--font-serif, Georgia, serif);
+    font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--hc-text);
   }
   .hcl-cta-strip__sub { font-size: 15px; color: var(--hc-text-muted); margin-bottom: 32px; }
 
@@ -529,13 +687,19 @@ const css = `
   }
   .hcl-footer__link:hover { color: var(--hc-text); }
 
-  /* Responsive */
+  /* Responsive — mobile first ≥320px, breakpoint at 680px and 1024px */
+  @media (max-width: 1023px) {
+    .hcl-step-row { grid-template-columns: 1fr; gap: 12px; }
+    .hcl-step-annotation { border-left: none; padding-left: 0; border-top: 1px dashed var(--hc-border); padding-top: 12px; }
+  }
+
   @media (max-width: 680px) {
-    .hcl-steps { grid-template-columns: 1fr; }
-    .hcl-why-grid { grid-template-columns: 1fr; }
     .hcl-footer__inner { flex-direction: column; gap: 16px; text-align: center; }
     .hcl-headline { font-size: 32px; }
     .hcl-preview__filter-row { flex-direction: column; align-items: flex-start; }
     .hcl-hero { padding: 64px 0 48px; }
+    .hcl-cta-arrow { display: none; }
+    .hcl-pullquote__head { font-size: 15px; }
+    .hcl-pullquote__body { font-size: 13px; }
   }
 `

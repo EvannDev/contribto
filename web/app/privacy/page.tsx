@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Logo } from '@/components/logo'
 
 export const metadata: Metadata = {
@@ -13,16 +14,16 @@ export default function PrivacyPage() {
 
       <nav className="hcl-nav">
         <div className="hcl-nav__inner">
-          <a href="/">
+          <Link href="/">
             <Logo className="hcl-logo" iconSize={18} />
-          </a>
-          <a href="/" className="hcl-back">← Back</a>
+          </Link>
+          <Link href="/" className="hcl-back">← Back</Link>
         </div>
       </nav>
 
       <main className="hcl-legal">
         <div className="hcl-container">
-          <p className="hcl-eyebrow">// legal</p>
+          <p className="hcl-eyebrow">{'// legal'}</p>
           <h1 className="hcl-headline">Privacy Policy</h1>
           <p className="hcl-meta">Last updated: May 2, 2026</p>
 

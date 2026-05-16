@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { IBM_Plex_Sans, IBM_Plex_Mono, Lora } from 'next/font/google'
 import './globals.css'
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -12,6 +12,13 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ['400', '500'],
   subsets: ['latin'],
   variable: '--font-mono',
+})
+
+const lora = Lora({
+  weight: ['400', '600'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  variable: '--font-serif',
 })
 
 export const metadata: Metadata = {
@@ -35,7 +42,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full`}>
+    <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${lora.variable} h-full`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
