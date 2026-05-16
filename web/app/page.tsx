@@ -1,10 +1,12 @@
 import { Logo } from '@/components/logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 
-// ── Data ──────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 
 interface PreviewLabel { text: string; variant: 'gfi' | 'blue' | 'orange' | 'purple' | 'lang' }
 interface PreviewIssue { repo: string; title: string; labels: PreviewLabel[]; age: string; comments: number; num: string }
+
+// ── Data ──────────────────────────────────────────────────────
 
 const PREVIEW_ISSUES: PreviewIssue[] = [
   {
@@ -16,7 +18,7 @@ const PREVIEW_ISSUES: PreviewIssue[] = [
   {
     repo: 'trpc / trpc',
     title: 'Document how to use tRPC with React Server Components in Next 14',
-    labels: [{ text: 'good first issue', variant: 'gfi' }, { text: 'documentation', variant: 'blue' }, { text: 'TypeScript', variant: 'lang' }],
+    labels: [{ text: 'good first issue', variant: 'gfi' }, { text: 'docs', variant: 'blue' }, { text: 'TypeScript', variant: 'lang' }],
     age: '5d ago', comments: 11, num: '#5621',
   },
   {
@@ -27,74 +29,70 @@ const PREVIEW_ISSUES: PreviewIssue[] = [
   },
 ]
 
-interface HowStep { num: string; title: string; body: React.ReactNode; annotation: string }
-
-const HOW_STEPS: HowStep[] = [
+const HOW_STEPS = [
   {
     num: '01',
-    title: 'Sign in with GitHub',
-    body: <>OAuth only. We request the minimum scope needed — read your public starred repos. We don&apos;t touch your private repos, your code, or your email.</>,
-    annotation: 'This is the only moment we touch GitHub on your behalf. After that, we work from our own cache of issue metadata.',
+    title: 'Connect GitHub',
+    body: 'OAuth read-only. We request the bare minimum — access to your public starred repos, nothing else, ever.',
   },
   {
     num: '02',
-    title: 'We scan your stars',
-    body: <>We fetch issues from the repos you&apos;ve starred, filtering to anything labeled <code className="hcl-code">good first issue</code> or <code className="hcl-code">beginner-friendly</code>. No open issues older than 6 months.</>,
-    annotation: 'We keep the list short on purpose. A filtered set of 20 relevant issues beats a firehose of 500 random ones.',
+    title: 'We do the scan',
+    body: 'We pull issues from your starred repos, keep only beginner-friendly ones, and drop anything stale or already claimed.',
   },
   {
     num: '03',
-    title: 'Browse and filter',
-    body: <>Sort by recency, filter by language or label. Click an issue to open it directly on GitHub. That&apos;s where the real work happens — we just get you there.</>,
-    annotation: 'The filter state persists across visits. Come back tomorrow and your view is right where you left it.',
+    title: 'You ship the PR',
+    body: 'Filter by language or label, click to open on GitHub. We get you to the right issue — you take it from there.',
   },
 ]
 
-const WHY_QUOTES = [
+const FEATURES = [
   {
-    head: "You've starred 200 repos and never opened a PR",
-    body: "Your GitHub stars are a record of projects you find interesting. Contrib.to turns that interest into actionable contribution opportunities, from repos you already trust.",
+    title: 'From repos you already trust',
+    body: "Every result comes from a project you chose to star. No recommendations engine, no trending noise, no repos you've never heard of.",
   },
   {
-    head: "You're not new to code, just new to contributing",
-    body: "Good first issues aren't just for beginners. They're often real bugs, small features, or doc improvements in projects you use every day. Low barrier to entry, real impact.",
+    title: 'Minimum permissions, maximum transparency',
+    body: 'We read your public stars. That is it. No private repos, no commits, no email. Revoke OAuth access from GitHub settings at any time.',
   },
   {
-    head: "You want to build a track record, not a portfolio",
-    body: "Open-source contributions are a genuine signal. A merged PR in a repo with 10k stars says more than any side project. We help you find the ones worth your time.",
+    title: 'A short list, not a firehose',
+    body: 'Issues must be open, unassigned, labeled as beginner-friendly, and under 6 months old. The list stays short and actionable on purpose.',
   },
   {
-    head: "This is a small project, not a startup",
-    body: "Contrib.to is a tool built by a developer who had the same problem. It's not VC-backed, not 'AI-powered', not going to upsell you a Pro plan. It just does one thing, hopefully well.",
+    title: 'Free with no catches',
+    body: "No plans, no limits, no upgrade prompt. Small tool, cheap infrastructure, no VC to answer to. If that ever changes, I'll say so plainly.",
   },
 ]
 
 interface FAQItem { q: string; a: React.ReactNode; aText?: string }
+
 const FAQ: FAQItem[] = [
   {
     q: 'What GitHub permissions do you request?',
-    a: <>We request <code>read:user</code> and the public starred repos scope only. We can&apos;t see your private repositories, your commits, your email, or anything else. You can revoke access from your GitHub settings at any time.</>,
-    aText: `We request read:user and the public starred repos scope only. We can't see your private repositories, your commits, your email, or anything else. You can revoke access from your GitHub settings at any time.`,
+    a: <>We request <code className="lp-code">read:user</code> and the public starred repos scope only. We cannot see your private repositories, your commits, your email, or anything else. You can revoke access from your GitHub settings at any time.</>,
+    aText: `We request read:user and the public starred repos scope only. We can't see private repos, commits, email, or anything else.`,
   },
   {
     q: 'Do you store my GitHub data?',
-    a: `We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.`,
-    aText: `We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos to serve your dashboard — this data is kept until the issue is closed on GitHub or you delete your account. We never store issue body content, comments, or any private data.`,
+    a: 'We store your GitHub username and a list of your starred repos. We also store issue metadata (title, URL, labels) from those repos — kept until the issue closes on GitHub or you delete your account. We never store issue body content, comments, or any private data.',
+    aText: `We store your username, starred repos list, and issue metadata. No private data, no issue body content, no comments.`,
   },
   {
-    q: `What if I don't have many starred repos?`,
-    a: `The fewer stars you have, the more focused the results. With 10 starred repos, you'll see issues from those 10 projects specifically — which might actually be more useful than a firehose of 300.`,
-    aText: `The fewer stars you have, the more focused the results. With 10 starred repos, you'll see issues from those 10 projects specifically — which might actually be more useful than a firehose of 300.`,
+    q: "What if I don't have many starred repos?",
+    a: 'Fewer stars means more focused results. With 10 starred repos you see issues from those 10 projects specifically — often more useful than a firehose of 300.',
+    aText: `Fewer stars means more focused results. 10 starred repos gives you 10 targeted projects.`,
   },
   {
     q: 'Is this free?',
-    a: `Yes. There's no pricing plan, no free tier limits, no "upgrade for more results." It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
-    aText: `Yes. There's no pricing plan, no free tier limits, no upgrade for more results. It's a small project running on cheap infrastructure. If that ever changes, I'll say so clearly.`,
+    a: "Yes. No pricing plan, no free tier limits, no upgrade prompt. Small project, cheap infrastructure. If that ever changes, I'll say so clearly.",
+    aText: `Yes. No plans, no limits, no upgrade prompt.`,
   },
   {
     q: 'What counts as a "good first issue"?',
-    a: <>We filter for issues with the <code>good first issue</code>, <code>good-first-issue</code>, <code>beginner-friendly</code>, or <code>help wanted</code> labels. We also filter out issues that are already assigned, closed, or older than 6 months.</>,
-    aText: 'We filter for issues with the "good first issue", "good-first-issue", "beginner-friendly", or "help wanted" labels. We also filter out issues that are already assigned, closed, or older than 6 months.',
+    a: <>We filter for <code className="lp-code">good first issue</code>, <code className="lp-code">good-first-issue</code>, <code className="lp-code">beginner-friendly</code>, and <code className="lp-code">help wanted</code> labels. We also exclude issues that are already assigned, closed, or older than 6 months.</>,
+    aText: 'Labels: good first issue, good-first-issue, beginner-friendly, help wanted. Excludes assigned, closed, or stale issues.',
   },
 ]
 
@@ -112,7 +110,7 @@ const faqJsonLd = {
 
 export default function LandingPage() {
   return (
-    <div className="hcl">
+    <div className="lp">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -120,146 +118,154 @@ export default function LandingPage() {
       <style>{css}</style>
 
       {/* ── Nav ── */}
-      <nav className="hcl-nav">
-        <div className="hcl-nav__inner">
-          <Logo className="hcl-logo" iconSize={18} />
-          <div className="hcl-nav__actions">
+      <nav className="lp-nav">
+        <div className="lp-nav__inner">
+          <Logo className="lp-logo" iconSize={18} />
+          <div className="lp-nav__actions">
             <ThemeToggle />
-            <a href="/login" className="hcl-btn hcl-btn--primary">Sign in with GitHub</a>
+            <a href="/login" className="lp-btn lp-btn--nav">Sign in</a>
           </div>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="hcl-hero">
-        <div className="hcl-container">
-          <p className="hcl-eyebrow">{'// good first issues, from repos you actually care about'}</p>
-          <h1 className="hcl-headline">
-            Stop hunting.<br />
-            Start{' '}
-            <span className="hcl-underline-wrap">
-              <em>contributing</em>
-              <WobblyUnderline />
-            </span>.
-          </h1>
-          <p className="hcl-sub">
-            We look at the GitHub repos you&apos;ve already starred and surface beginner-friendly issues from them.
-            That&apos;s it. No algorithm, no recommendations engine, no &ldquo;AI-curated&rdquo; anything.
-          </p>
-          <div className="hcl-cta-row">
-            <div className="hcl-cta-with-arrow">
-              <CtaArrow />
-              <a href="/login" className="hcl-btn hcl-btn--github">
-                <GithubIcon />
-                Sign in with GitHub
-              </a>
-            </div>
-            <a href="/dashboard" className="hcl-btn hcl-btn--outline">See a demo</a>
-          </div>
-          <p className="hcl-hero-note">{'// free. no credit card. we only read your public stars.'}</p>
+      <section className="lp-hero">
+        <div className="lp-container">
+          <div className="lp-hero__grid">
 
-          {/* Preview window */}
-          <div className="hcl-preview">
-            <div className="hcl-preview__bar">
-              <span className="hcl-preview__dot" />
-              <span className="hcl-preview__dot" />
-              <span className="hcl-preview__dot" />
-              <span className="hcl-preview__url">contrib.to/dashboard</span>
-            </div>
-            <div className="hcl-preview__body">
-              <div className="hcl-preview__filter-row">
-                <span className="hcl-mono-xs">23 issues · filtered by: TypeScript, good first issue</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <span className="hcl-badge hcl-badge--lang">TypeScript</span>
-                  <span className="hcl-badge hcl-badge--gfi">good first issue</span>
-                </div>
+            <div className="lp-hero__text">
+              <div className="lp-tag">
+                <TagDot />
+                open source contributions, from repos you care about
               </div>
-              {PREVIEW_ISSUES.map((issue, i) => (
-                <div
-                  key={i}
-                  className={`hcl-issue-card${i === 0 ? ' hcl-issue-card--first' : ''}${i === PREVIEW_ISSUES.length - 1 ? ' hcl-issue-card--last' : ''}`}
-                >
-                  <div className="hcl-issue-card__left">
-                    <span className="hcl-issue-card__repo">{issue.repo}</span>
-                    <span className="hcl-issue-card__title">{issue.title}</span>
-                    <div className="hcl-issue-card__meta">
-                      {issue.labels.map((l, j) => (
-                        <span key={j} className={`hcl-badge hcl-badge--${l.variant}`}>{l.text}</span>
-                      ))}
-                      <span className="hcl-meta-item"><ClockIcon />{issue.age}</span>
-                      <span className="hcl-meta-item"><CommentIcon />{issue.comments}</span>
+              <h1 className="lp-headline">
+                Stop hunting for<br />
+                issues.{' '}
+                <span className="lp-headline__accent">Start shipping</span>{' '}
+                PRs.
+              </h1>
+              <p className="lp-sub">
+                Connect GitHub once. We scan the repos you&apos;ve already starred
+                and surface beginner-friendly issues — no algorithm, no noise,
+                no repos you&apos;ve never heard of.
+              </p>
+              <div className="lp-cta-row">
+                <a href="/login" className="lp-btn lp-btn--cta">
+                  <GithubIcon />
+                  Sign in with GitHub
+                </a>
+                <a href="/dashboard" className="lp-btn lp-btn--ghost">View demo</a>
+              </div>
+              <div className="lp-trust">
+                <span>Free</span>
+                <TrustDot />
+                <span>Read-only OAuth</span>
+                <TrustDot />
+                <span>No private data</span>
+              </div>
+            </div>
+
+            <div className="lp-hero__visual">
+              <div className="lp-preview">
+                <div className="lp-preview__bar">
+                  <div className="lp-preview__dots">
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                  </div>
+                  <span className="lp-preview__url">contrib.to/dashboard</span>
+                </div>
+                <div className="lp-preview__body">
+                  <div className="lp-preview__filter-row">
+                    <span className="lp-preview__count">23 issues · TypeScript, good first issue</span>
+                    <div className="lp-preview__badges">
+                      <span className="lp-badge lp-badge--lang">TypeScript</span>
+                      <span className="lp-badge lp-badge--gfi">good first issue</span>
                     </div>
                   </div>
-                  <div className="hcl-issue-card__right">
-                    <span className="hcl-mono-xs">{issue.num}</span>
-                  </div>
+                  {PREVIEW_ISSUES.map((issue, i) => (
+                    <div
+                      key={i}
+                      className={`lp-issue${i === 0 ? ' lp-issue--first' : ''}${i === PREVIEW_ISSUES.length - 1 ? ' lp-issue--last' : ''}`}
+                    >
+                      <div className="lp-issue__left">
+                        <span className="lp-issue__repo">{issue.repo}</span>
+                        <span className="lp-issue__title">{issue.title}</span>
+                        <div className="lp-issue__meta">
+                          {issue.labels.map((l, j) => (
+                            <span key={j} className={`lp-badge lp-badge--${l.variant}`}>{l.text}</span>
+                          ))}
+                          <span className="lp-issue__age">{issue.age}</span>
+                        </div>
+                      </div>
+                      <span className="lp-issue__num">{issue.num}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
+
           </div>
         </div>
       </section>
 
       {/* ── How it works ── */}
-      <section className="hcl-section">
-        <div className="hcl-container">
-          <p className="hcl-section-label">{'// how it works'}</p>
-          <h2 className="hcl-section-heading">
-            Three steps, no magic.
-          </h2>
-          <p className="hcl-section-sub">We&apos;re not doing anything fancy. The value is in the curation, not the technology.</p>
-          <ol className="hcl-steps-list">
-            {HOW_STEPS.map((step) => (
-              <li key={step.num} className="hcl-step-row">
-                <div className="hcl-step-main">
-                  <span className="hcl-step__num" aria-hidden="true">{step.num}</span>
-                  <div>
-                    <p className="hcl-step__title">{step.title}</p>
-                    <p className="hcl-step__body">{step.body}</p>
-                  </div>
-                </div>
-                <p className="hcl-step-annotation">{step.annotation}</p>
-              </li>
+      <section className="lp-section lp-section--tinted">
+        <div className="lp-container">
+          <div className="lp-section-header">
+            <p className="lp-label">How it works</p>
+            <h2 className="lp-section-heading">Three steps. No magic.</h2>
+          </div>
+          <div className="lp-steps">
+            {HOW_STEPS.map(step => (
+              <div key={step.num} className="lp-step">
+                <span className="lp-step__num" aria-hidden="true">{step.num}</span>
+                <h3 className="lp-step__title">{step.title}</h3>
+                <p className="lp-step__body">{step.body}</p>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 
-      {/* ── Who it's for ── */}
-      <section className="hcl-section">
-        <div className="hcl-container">
-          <p className="hcl-section-label">{'// who this is for'}</p>
-          <h2 className="hcl-section-heading">
-            For developers who want to contribute<br />
-            but don&apos;t know where to start.
-          </h2>
-          <ul className="hcl-pullquote-list">
-            {WHY_QUOTES.map((q, i) => (
-              <li key={i} className="hcl-pullquote">
-                <p className="hcl-pullquote__head">
-                  <AsteriskMark />
-                  {q.head}
-                </p>
-                <p className="hcl-pullquote__body">{q.body}</p>
-              </li>
+      {/* ── Features ── */}
+      <section className="lp-section">
+        <div className="lp-container">
+          <div className="lp-section-header">
+            <p className="lp-label">Why it works</p>
+            <h2 className="lp-section-heading">
+              Relevance beats volume,<br />every time.
+            </h2>
+          </div>
+          <div className="lp-features">
+            {FEATURES.map((f, i) => (
+              <div key={i} className="lp-feature">
+                <FeatureDiamond />
+                <div>
+                  <p className="lp-feature__title">{f.title}</p>
+                  <p className="lp-feature__body">{f.body}</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section className="hcl-section">
-        <div className="hcl-container">
-          <p className="hcl-section-label">{'// questions'}</p>
-          <h2 className="hcl-section-heading">Honest answers.</h2>
-          <div className="hcl-faq">
+      <section className="lp-section lp-section--tinted">
+        <div className="lp-container">
+          <div className="lp-section-header">
+            <p className="lp-label">Questions</p>
+            <h2 className="lp-section-heading">Straight answers.</h2>
+          </div>
+          <div className="lp-faq">
             {FAQ.map((item, i) => (
-              <details key={i} className="hcl-faq__item">
-                <summary className="hcl-faq__q">
+              <details key={i} className="lp-faq__item">
+                <summary className="lp-faq__q">
                   {item.q}
-                  <PlusIcon />
+                  <ChevronIcon />
                 </summary>
-                <div className="hcl-faq__a">{item.a}</div>
+                <div className="lp-faq__a">{item.a}</div>
               </details>
             ))}
           </div>
@@ -267,26 +273,30 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA strip ── */}
-      <section className="hcl-cta-strip">
-        <div className="hcl-container">
-          <h2 className="hcl-cta-strip__heading">Ready to ship your first PR?</h2>
-          <p className="hcl-cta-strip__sub">Takes 30 seconds to connect. No setup, no config, no docs to read.</p>
-          <a href="/login" className="hcl-btn hcl-btn--github" style={{ display: 'inline-flex' }}>
-            <GithubIcon />
-            Sign in with GitHub
-          </a>
+      <section className="lp-cta-strip">
+        <div className="lp-container">
+          <div className="lp-cta-strip__inner">
+            <div>
+              <h2 className="lp-cta-strip__heading">Ready to open your first PR?</h2>
+              <p className="lp-cta-strip__sub">30 seconds to connect. No setup, no config, no onboarding flow to sit through.</p>
+            </div>
+            <a href="/login" className="lp-btn lp-btn--cta-strip">
+              <GithubIcon />
+              Sign in with GitHub
+            </a>
+          </div>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className="hcl-footer">
-        <div className="hcl-container">
-          <div className="hcl-footer__inner">
-            <span className="hcl-footer__copy">contrib.to — made by a developer, for developers</span>
-            <div className="hcl-footer__links">
-              <a href="https://github.com/EvannDev/contribto" className="hcl-footer__link">GitHub</a>
-              <a href="/privacy" className="hcl-footer__link">Privacy</a>
-              <a href="/terms" className="hcl-footer__link">Terms</a>
+      <footer className="lp-footer">
+        <div className="lp-container">
+          <div className="lp-footer__inner">
+            <span className="lp-footer__copy">contrib.to — a small tool, built by a developer</span>
+            <div className="lp-footer__links">
+              <a href="https://github.com/EvannDev/contribto" className="lp-footer__link">GitHub</a>
+              <a href="/privacy" className="lp-footer__link">Privacy</a>
+              <a href="/terms" className="lp-footer__link">Terms</a>
             </div>
           </div>
         </div>
@@ -295,411 +305,483 @@ export default function LandingPage() {
   )
 }
 
-// ── SVG Flourishes ────────────────────────────────────────────
-
-function WobblyUnderline() {
-  return (
-    <svg
-      className="hcl-wobbly-underline"
-      viewBox="0 0 200 12"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M2 9 C20 4, 40 11, 60 7 C80 3, 100 10, 120 6 C140 2, 160 9, 180 5 C190 3, 196 7, 198 9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.7"
-      />
-    </svg>
-  )
-}
-
-function CtaArrow() {
-  return (
-    <svg
-      className="hcl-cta-arrow"
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path
-        d="M6 8 C10 6, 28 10, 34 26"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        opacity="0.5"
-      />
-      <path
-        d="M28 22 L34 26 L30 32"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.5"
-      />
-    </svg>
-  )
-}
-
-function AsteriskMark() {
-  return (
-    <svg
-      className="hcl-asterisk"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <path d="M8 2v12M2 8h12M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-// ── Icons ─────────────────────────────────────────────────────
+// ── Icons & SVG ───────────────────────────────────────────────
 
 function GithubIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
     </svg>
   )
 }
 
-function ClockIcon() {
+function ChevronIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 15 15" fill="none">
-      <path d="M7.5 1a6.5 6.5 0 100 13A6.5 6.5 0 007.5 1zm.5 7H5V7h3V4h1v4z" fill="currentColor" />
+    <svg className="lp-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function CommentIcon() {
+function FeatureDiamond() {
   return (
-    <svg width="11" height="11" viewBox="0 0 15 15" fill="none">
-      <path d="M1 7.5C1 4 4 1 7.5 1S14 4 14 7.5c0 1.6-.57 3.07-1.5 4.22V13l-2-1a6.44 6.44 0 01-3 .5C4 12.5 1 10.5 1 7.5z" stroke="currentColor" strokeWidth="1.2" />
+    <svg className="lp-feature__icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M9 1l3.5 7.5L9 17 5.5 8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="currentColor" fillOpacity="0.12" />
     </svg>
   )
 }
 
-function PlusIcon() {
+function TagDot() {
   return (
-    <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-      <path d="M7.5 2v11M2 7.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg width="6" height="6" viewBox="0 0 6 6" aria-hidden="true">
+      <circle cx="3" cy="3" r="3" fill="currentColor" />
     </svg>
   )
+}
+
+function TrustDot() {
+  return <span aria-hidden="true" className="lp-trust-dot" />
 }
 
 // ── CSS ───────────────────────────────────────────────────────
 
 const css = `
-  /* Root — design token overrides for the landing scope */
-  .hcl {
-    --accent-fg: var(--hc-accent);
-    background: var(--hc-bg);
-    color: var(--hc-text);
-    font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif);
+  /* ── Design tokens ── */
+  .lp {
+    --lp-bg:            #FAFBFC;
+    --lp-bg-subtle:     #F3F4F7;
+    --lp-bg-tinted:     #F0F1F5;
+    --lp-bg-overlay:    rgba(250,251,252,0.92);
+    --lp-text:          #0F1623;
+    --lp-text-muted:    #4B5263;
+    --lp-text-subtle:   #8F97A8;
+    --lp-border:        #E4E6EC;
+    --lp-border-strong: #CDD0DB;
+    --lp-accent:        #6366F1;
+    --lp-accent-hover:  #4F46E5;
+    --lp-accent-subtle: #EEF2FF;
+    --lp-accent-muted:  #C7D2FE;
+    --lp-green:         #059669;
+    --lp-green-subtle:  #D1FAE5;
+    --lp-green-border:  #A7F3D0;
+    --lp-blue:          #1D4ED8;
+    --lp-blue-subtle:   #DBEAFE;
+    --lp-blue-border:   #BFDBFE;
+    --lp-orange:        #C2410C;
+    --lp-orange-subtle: #FEF3C7;
+    --lp-orange-border: #FDE68A;
+
+    background: var(--lp-bg);
+    color: var(--lp-text);
+    font-family: var(--font-sans, -apple-system, system-ui, sans-serif);
     min-height: 100vh;
   }
 
-  /* Container */
-  .hcl-container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  [data-theme="dark"] .lp {
+    --lp-bg:            #080A0F;
+    --lp-bg-subtle:     #0D1018;
+    --lp-bg-tinted:     #0B0D15;
+    --lp-bg-overlay:    rgba(8,10,15,0.92);
+    --lp-text:          #F0F2F8;
+    --lp-text-muted:    #8F97A8;
+    --lp-text-subtle:   #505867;
+    --lp-border:        #1A1D28;
+    --lp-border-strong: #252835;
+    --lp-accent:        #818CF8;
+    --lp-accent-hover:  #6366F1;
+    --lp-accent-subtle: rgba(129,140,248,0.10);
+    --lp-accent-muted:  rgba(129,140,248,0.25);
+    --lp-green:         #34D399;
+    --lp-green-subtle:  rgba(52,211,153,0.10);
+    --lp-green-border:  rgba(52,211,153,0.22);
+    --lp-blue:          #60A5FA;
+    --lp-blue-subtle:   rgba(96,165,250,0.10);
+    --lp-blue-border:   rgba(96,165,250,0.22);
+    --lp-orange:        #FBBF24;
+    --lp-orange-subtle: rgba(251,191,36,0.10);
+    --lp-orange-border: rgba(251,191,36,0.22);
+  }
 
-  /* Nav */
-  .hcl-nav {
+  /* ── Container ── */
+  .lp-container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Nav ── */
+  .lp-nav {
     position: sticky; top: 0; z-index: 50;
-    background: var(--hc-bg-overlay);
-    border-bottom: 1px solid var(--hc-border);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: var(--lp-bg-overlay);
+    border-bottom: 1px solid var(--lp-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
-  .hcl-nav__inner {
+  .lp-nav__inner {
     display: flex; align-items: center; justify-content: space-between;
-    height: 52px; max-width: 960px; margin: 0 auto; padding: 0 24px;
+    height: 54px; max-width: 1080px; margin: 0 auto; padding: 0 24px;
   }
-  .hcl-logo {
+  .lp-logo {
     font-family: var(--font-mono, monospace);
-    font-size: 13px; font-weight: 500; letter-spacing: -0.01em;
+    font-size: 13px; font-weight: 500;
   }
-  .hcl-nav__actions { display: flex; align-items: center; gap: 12px; }
+  .lp-nav__actions { display: flex; align-items: center; gap: 10px; }
 
-  /* Theme button */
-  .hcl-theme-btn {
-    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--hc-border); border-radius: 6px;
-    color: var(--hc-text-muted); background: transparent; cursor: pointer;
-    transition: background 120ms, color 120ms;
-  }
-  .hcl-theme-btn:hover { background: var(--hc-bg-subtle); color: var(--hc-text); }
-
-  /* Buttons */
-  .hcl-btn {
+  /* ── Buttons ── */
+  .lp-btn {
     display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--font-sans, sans-serif); font-size: 13px; font-weight: 500;
-    padding: 7px 16px; border-radius: 6px;
-    transition: background 120ms, border-color 120ms, color 120ms;
-    white-space: nowrap; cursor: pointer; text-decoration: none;
+    font-size: 13px; font-weight: 500;
+    padding: 7px 16px; border-radius: 7px;
+    border: 1px solid transparent;
+    cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background 120ms, border-color 120ms, color 120ms, box-shadow 120ms;
   }
-  .hcl-btn--primary {
-    background: var(--hc-text); color: var(--hc-bg);
-    border: 1px solid var(--hc-text);
+  .lp-btn--nav {
+    background: var(--lp-text); color: var(--lp-bg);
+    border-color: var(--lp-text);
   }
-  .hcl-btn--primary:hover { background: var(--hc-accent); border-color: var(--hc-accent); color: #fff; }
-  .hcl-btn--github {
-    background: var(--hc-text); color: var(--hc-bg);
-    border: 1px solid var(--hc-text);
-    font-size: 15px; padding: 11px 24px; gap: 10px;
+  .lp-btn--nav:hover { background: var(--lp-accent); border-color: var(--lp-accent); color: #fff; }
+  .lp-btn--cta {
+    background: var(--lp-accent); color: #fff;
+    border-color: var(--lp-accent);
+    font-size: 15px; padding: 12px 22px; border-radius: 8px; gap: 10px;
+    box-shadow: 0 1px 3px rgba(99,102,241,0.25);
   }
-  .hcl-btn--github:hover { background: var(--hc-accent); border-color: var(--hc-accent); color: #fff; }
-  .hcl-btn--github svg { flex-shrink: 0; }
-  .hcl-btn--outline {
-    background: transparent; color: var(--hc-text);
-    border: 1px solid var(--hc-border-strong);
-    font-size: 15px; padding: 11px 24px;
+  .lp-btn--cta:hover { background: var(--lp-accent-hover); border-color: var(--lp-accent-hover); box-shadow: 0 2px 8px rgba(99,102,241,0.35); }
+  .lp-btn--ghost {
+    background: transparent; color: var(--lp-text-muted);
+    border-color: var(--lp-border-strong);
+    font-size: 15px; padding: 12px 22px; border-radius: 8px;
   }
-  .hcl-btn--outline:hover { border-color: var(--hc-text); }
+  .lp-btn--ghost:hover { border-color: var(--lp-text); color: var(--lp-text); }
+  .lp-btn--cta-strip {
+    background: #fff; color: var(--lp-accent);
+    border-color: rgba(255,255,255,0.25);
+    font-size: 15px; padding: 12px 22px; border-radius: 8px; gap: 10px;
+    flex-shrink: 0; font-weight: 600;
+  }
+  .lp-btn--cta-strip:hover { background: var(--lp-accent-subtle); border-color: var(--lp-accent-subtle); }
 
-  /* Hero */
-  .hcl-hero { padding: 96px 0 80px; border-bottom: 1px solid var(--hc-border-subtle); }
-  .hcl-eyebrow {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--hc-text-subtle); margin-bottom: 20px;
+  /* ── Hero ── */
+  .lp-hero {
+    padding: 80px 0 72px;
+    border-bottom: 1px solid var(--lp-border);
+    position: relative; overflow: hidden;
   }
-  .hcl-headline {
-    font-family: var(--font-serif, Georgia, serif);
-    font-size: clamp(36px, 5vw, 60px);
-    font-weight: 600; font-style: italic;
-    line-height: 1.1; letter-spacing: -0.02em;
-    color: var(--hc-text); max-width: 700px; margin-bottom: 20px;
-  }
-  .hcl-headline em { font-style: normal; color: var(--hc-accent); }
-
-  /* Wobbly underline flourish */
-  .hcl-underline-wrap { position: relative; display: inline-block; }
-  .hcl-wobbly-underline {
-    position: absolute; bottom: -6px; left: 0;
-    width: 100%; height: 12px;
-    color: var(--hc-accent);
+  .lp-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 75% 40%, rgba(99,102,241,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 85% 80%, rgba(129,140,248,0.05) 0%, transparent 60%);
     pointer-events: none;
   }
-
-  /* CTA arrow flourish */
-  .hcl-cta-with-arrow { position: relative; display: inline-flex; }
-  .hcl-cta-arrow {
-    position: absolute; top: -28px; left: -8px;
-    width: 40px; height: 40px;
-    color: var(--hc-text-subtle);
-    pointer-events: none;
-    transform: rotate(-15deg);
+  [data-theme="dark"] .lp-hero::after {
+    background:
+      radial-gradient(ellipse 60% 50% at 75% 40%, rgba(129,140,248,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 85% 80%, rgba(129,140,248,0.04) 0%, transparent 60%);
   }
 
-  .hcl-sub {
-    font-size: 17px; color: var(--hc-text-muted);
-    max-width: 480px; line-height: 1.65; margin-bottom: 32px;
-  }
-  .hcl-cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .hcl-hero-note {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    color: var(--hc-text-subtle); margin-top: 16px;
-  }
-
-  /* Preview window */
-  .hcl-preview {
-    margin-top: 48px;
-    border: 1px solid var(--hc-border); border-radius: 10px;
-    background: var(--hc-bg-subtle); overflow: hidden;
-    box-shadow: 0 8px 24px rgba(28,25,23,0.10), 0 2px 6px rgba(28,25,23,0.05);
-  }
-  [data-theme="dark"] .hcl-preview {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.34), 0 2px 6px rgba(0,0,0,0.16);
-  }
-  .hcl-preview__bar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 10px 16px; background: var(--hc-bg); border-bottom: 1px solid var(--hc-border);
-  }
-  .hcl-preview__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--hc-border-strong); flex-shrink: 0; }
-  .hcl-preview__url {
-    flex: 1; font-family: var(--font-mono, monospace); font-size: 11px;
-    color: var(--hc-text-subtle); padding: 3px 10px;
-    background: var(--hc-bg-subtle); border: 1px solid var(--hc-border); border-radius: 4px;
-  }
-  .hcl-preview__body { padding: 16px; }
-  .hcl-preview__filter-row {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
-  }
-
-  /* Issue cards (preview) */
-  .hcl-issue-card {
-    display: grid; grid-template-columns: 1fr auto; gap: 16px;
-    padding: 14px 16px;
-    border: 1px solid var(--hc-border); border-bottom: none;
-    background: var(--hc-bg); transition: background 120ms; cursor: pointer;
-  }
-  .hcl-issue-card--first { border-radius: 6px 6px 0 0; }
-  .hcl-issue-card--last { border-bottom: 1px solid var(--hc-border); border-radius: 0 0 6px 6px; }
-  .hcl-issue-card:hover { background: var(--hc-bg-subtle); }
-  .hcl-issue-card__left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .hcl-issue-card__repo {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    color: var(--hc-text-muted); letter-spacing: -0.01em;
-  }
-  .hcl-issue-card__title { font-size: 13px; font-weight: 500; color: var(--hc-text); line-height: 1.4; }
-  .hcl-issue-card__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .hcl-issue-card__right { display: flex; align-items: flex-start; flex-shrink: 0; }
-
-  /* Badges */
-  .hcl-badge {
-    display: inline-flex; align-items: center;
-    font-family: var(--font-mono, monospace); font-size: 10px; font-weight: 500;
-    padding: 2px 7px; border-radius: 9999px; border: 1px solid; white-space: nowrap;
-  }
-  .hcl-badge--lang { background: var(--hc-bg-subtle); border-color: var(--hc-border); color: var(--hc-text-muted); }
-  .hcl-badge--gfi  { background: var(--hc-sage-subtle, #EBF2EC); border-color: var(--hc-sage, #5A7A5E); color: var(--hc-sage, #5A7A5E); }
-  .hcl-badge--blue { background: #eff6ff; border-color: #1e5fad; color: #1e5fad; }
-  .hcl-badge--orange { background: var(--hc-accent-subtle); border-color: var(--hc-accent-border); color: var(--hc-accent); }
-  .hcl-badge--purple { background: #f3f0fb; border-color: #7c3aed; color: #6d28d9; }
-  [data-theme="dark"] .hcl-badge--gfi    { background: #0d1f12; border-color: #6aaa72; color: #6aaa72; }
-  [data-theme="dark"] .hcl-badge--blue   { background: #0a1228; border-color: #60a5fa; color: #60a5fa; }
-  [data-theme="dark"] .hcl-badge--purple { background: #180e2a; border-color: #a78bfa; color: #a78bfa; }
-
-  /* Meta */
-  .hcl-meta-item {
-    font-family: var(--font-mono, monospace); font-size: 11px; color: var(--hc-text-subtle);
-    display: flex; align-items: center; gap: 4px;
-  }
-  .hcl-mono-xs { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--hc-text-subtle); }
-
-  /* Sections */
-  .hcl-section { padding: 80px 0; border-bottom: 1px solid var(--hc-border-subtle); }
-  .hcl-section-label {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--hc-text-subtle); margin-bottom: 16px;
-  }
-  .hcl-section-heading {
-    font-family: var(--font-serif, Georgia, serif);
-    font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25;
-    color: var(--hc-text); margin-bottom: 12px;
-  }
-  .hcl-section-sub { font-size: 15px; color: var(--hc-text-muted); max-width: 480px; line-height: 1.65; }
-
-  /* How it works — annotated vertical list */
-  .hcl-steps-list {
-    list-style: none; padding: 0; margin: 40px 0 0;
-    display: flex; flex-direction: column;
-  }
-  .hcl-step-row {
+  .lp-hero__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 32px 48px;
-    padding: 32px 0;
-    border-top: 1px solid var(--hc-border);
-    align-items: start;
-  }
-  .hcl-step-row:last-child { border-bottom: 1px solid var(--hc-border); }
-  .hcl-step-main { display: flex; gap: 20px; align-items: flex-start; }
-  .hcl-step__num {
-    font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 500;
-    color: var(--hc-accent); letter-spacing: 0.04em;
-    flex-shrink: 0; padding-top: 3px;
-  }
-  .hcl-step__title {
-    font-size: 16px; font-weight: 600; color: var(--hc-text); margin-bottom: 8px; line-height: 1.3;
-  }
-  .hcl-step__body { font-size: 13px; color: var(--hc-text-muted); line-height: 1.65; }
-  .hcl-step-annotation {
-    font-size: 13px; color: var(--hc-text-subtle); line-height: 1.7;
-    border-left: 2px solid var(--hc-border); padding-left: 20px;
-    margin: 0;
-  }
-  .hcl-code {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    background: var(--hc-bg-subtle); border: 1px solid var(--hc-border);
-    border-radius: 3px; padding: 1px 5px; color: var(--hc-text-muted);
+    gap: 56px;
+    align-items: center;
+    position: relative; z-index: 1;
   }
 
-  /* Who it's for — pull-quote list */
-  .hcl-pullquote-list {
-    list-style: none; padding: 0; margin: 40px 0 0;
-    display: flex; flex-direction: column; gap: 36px;
+  /* Tag */
+  .lp-tag {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-mono, monospace); font-size: 11px;
+    color: var(--lp-accent);
+    background: var(--lp-accent-subtle);
+    border: 1px solid var(--lp-accent-muted);
+    padding: 5px 11px; border-radius: 999px;
+    margin-bottom: 28px;
+    letter-spacing: 0.01em;
   }
-  .hcl-pullquote { max-width: 680px; }
-  .hcl-pullquote__head {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: 17px; font-weight: 600; color: var(--hc-text);
+
+  /* Headline */
+  .lp-headline {
+    font-size: clamp(30px, 4vw, 50px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    color: var(--lp-text);
+    margin-bottom: 20px;
+  }
+  .lp-headline__accent { color: var(--lp-accent); }
+
+  .lp-sub {
+    font-size: 16px; color: var(--lp-text-muted);
+    line-height: 1.7; max-width: 420px; margin-bottom: 32px;
+  }
+
+  .lp-cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .lp-trust {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-top: 20px;
+    font-family: var(--font-mono, monospace); font-size: 11px;
+    color: var(--lp-text-subtle);
+  }
+  .lp-trust-dot {
+    display: inline-block; width: 3px; height: 3px;
+    border-radius: 50%; background: var(--lp-text-subtle);
+  }
+
+  /* ── Preview window ── */
+  .lp-preview {
+    border: 1px solid var(--lp-border);
+    border-radius: 12px;
+    background: var(--lp-bg-subtle);
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(99,102,241,0.04),
+      0 4px 8px rgba(0,0,0,0.04),
+      0 16px 40px rgba(0,0,0,0.07);
+  }
+  [data-theme="dark"] .lp-preview {
+    box-shadow:
+      0 0 0 1px rgba(129,140,248,0.08),
+      0 4px 16px rgba(0,0,0,0.4),
+      0 24px 56px rgba(0,0,0,0.5);
+  }
+  .lp-preview__bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: var(--lp-bg);
+    border-bottom: 1px solid var(--lp-border);
+  }
+  .lp-preview__dots { display: flex; gap: 5px; }
+  .lp-preview__dots span {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--lp-border-strong);
+  }
+  .lp-preview__url {
+    flex: 1; font-family: var(--font-mono, monospace); font-size: 11px;
+    color: var(--lp-text-subtle);
+    background: var(--lp-bg-subtle);
+    border: 1px solid var(--lp-border);
+    border-radius: 5px; padding: 3px 10px; margin: 0 6px;
+  }
+  .lp-preview__body { padding: 14px 16px; }
+  .lp-preview__filter-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px; flex-wrap: wrap; gap: 6px;
+  }
+  .lp-preview__count {
+    font-family: var(--font-mono, monospace); font-size: 10px;
+    color: var(--lp-text-subtle);
+  }
+  .lp-preview__badges { display: flex; gap: 5px; }
+
+  /* ── Issue rows ── */
+  .lp-issue {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--lp-border); border-bottom: none;
+    background: var(--lp-bg);
+    transition: background 100ms;
+    cursor: pointer;
+  }
+  .lp-issue--first { border-radius: 8px 8px 0 0; }
+  .lp-issue--last { border-bottom: 1px solid var(--lp-border); border-radius: 0 0 8px 8px; }
+  .lp-issue:hover { background: var(--lp-bg-subtle); }
+  .lp-issue__left { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .lp-issue__repo {
+    font-family: var(--font-mono, monospace); font-size: 10px;
+    color: var(--lp-accent); font-weight: 500;
+  }
+  .lp-issue__title { font-size: 12px; font-weight: 500; color: var(--lp-text); line-height: 1.4; }
+  .lp-issue__meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .lp-issue__age {
+    font-family: var(--font-mono, monospace); font-size: 10px;
+    color: var(--lp-text-subtle);
+  }
+  .lp-issue__num {
+    font-family: var(--font-mono, monospace); font-size: 10px;
+    color: var(--lp-text-subtle); flex-shrink: 0;
+  }
+
+  /* ── Badges ── */
+  .lp-badge {
+    display: inline-flex; align-items: center;
+    font-family: var(--font-mono, monospace); font-size: 10px; font-weight: 500;
+    padding: 2px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap;
+  }
+  .lp-badge--lang {
+    background: var(--lp-bg-subtle); color: var(--lp-text-muted);
+    border-color: var(--lp-border);
+  }
+  .lp-badge--gfi {
+    background: var(--lp-green-subtle); color: var(--lp-green);
+    border-color: var(--lp-green-border);
+  }
+  .lp-badge--blue {
+    background: var(--lp-blue-subtle); color: var(--lp-blue);
+    border-color: var(--lp-blue-border);
+  }
+  .lp-badge--orange {
+    background: var(--lp-orange-subtle); color: var(--lp-orange);
+    border-color: var(--lp-orange-border);
+  }
+  .lp-badge--purple {
+    background: #F3F0FB; color: #6D28D9; border-color: #DDD6FE;
+  }
+  [data-theme="dark"] .lp-badge--purple {
+    background: rgba(167,139,250,0.10); color: #A78BFA; border-color: rgba(167,139,250,0.22);
+  }
+
+  /* ── Sections ── */
+  .lp-section { padding: 80px 0; border-bottom: 1px solid var(--lp-border); }
+  .lp-section--tinted { background: var(--lp-bg-tinted); }
+
+  .lp-section-header { margin-bottom: 48px; }
+  .lp-label {
+    font-family: var(--font-mono, monospace); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--lp-accent); margin-bottom: 12px;
+  }
+  .lp-section-heading {
+    font-size: clamp(22px, 2.8vw, 34px);
+    font-weight: 700; letter-spacing: -0.025em; line-height: 1.2;
+    color: var(--lp-text);
+  }
+
+  /* ── Steps (3 cards) ── */
+  .lp-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .lp-step {
+    background: var(--lp-bg);
+    border: 1px solid var(--lp-border);
+    border-radius: 10px;
+    padding: 28px 24px;
+  }
+  .lp-step__num {
+    display: block;
+    font-family: var(--font-mono, monospace); font-size: 11px; font-weight: 600;
+    color: var(--lp-accent); letter-spacing: 0.05em; margin-bottom: 18px;
+  }
+  .lp-step__title {
+    font-size: 16px; font-weight: 600; color: var(--lp-text);
     margin-bottom: 10px; line-height: 1.3;
-    font-family: var(--font-serif, Georgia, serif);
   }
-  .hcl-pullquote__body { font-size: 15px; color: var(--hc-text-muted); line-height: 1.7; }
-
-  /* Asterisk flourish */
-  .hcl-asterisk {
-    width: 14px; height: 14px; flex-shrink: 0;
-    color: var(--hc-accent); margin-top: 3px;
+  .lp-step__body {
+    font-size: 14px; color: var(--lp-text-muted); line-height: 1.7;
   }
 
-  /* FAQ */
-  .hcl-faq { margin-top: 32px; }
-  .hcl-faq__item { border-top: 1px solid var(--hc-border); }
-  .hcl-faq__item:last-child { border-bottom: 1px solid var(--hc-border); }
-  .hcl-faq__q {
-    display: flex; align-items: center; justify-content: space-between;
+  /* ── Features (2×2) ── */
+  .lp-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px 48px;
+  }
+  .lp-feature { display: flex; gap: 14px; align-items: flex-start; }
+  .lp-feature__icon { color: var(--lp-accent); flex-shrink: 0; margin-top: 1px; }
+  .lp-feature__title {
+    font-size: 15px; font-weight: 600; color: var(--lp-text);
+    margin-bottom: 7px; line-height: 1.3;
+  }
+  .lp-feature__body {
+    font-size: 14px; color: var(--lp-text-muted); line-height: 1.7;
+  }
+
+  /* ── FAQ ── */
+  .lp-faq { border-top: 1px solid var(--lp-border); }
+  .lp-faq__item { border-bottom: 1px solid var(--lp-border); }
+  .lp-faq__q {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
     padding: 20px 0; font-size: 15px; font-weight: 500;
-    cursor: pointer; list-style: none; color: var(--hc-text);
+    cursor: pointer; list-style: none; color: var(--lp-text);
   }
-  .hcl-faq__q::-webkit-details-marker { display: none; }
-  .hcl-faq__q svg { flex-shrink: 0; color: var(--hc-text-subtle); transition: transform 200ms cubic-bezier(0.16,1,0.3,1); }
-  details[open] .hcl-faq__q svg { transform: rotate(45deg); }
-  .hcl-faq__a {
-    padding-bottom: 20px; font-size: 13px; color: var(--hc-text-muted); line-height: 1.65; max-width: 640px;
+  .lp-faq__q::-webkit-details-marker { display: none; }
+  .lp-chevron {
+    flex-shrink: 0; color: var(--lp-text-subtle);
+    transition: transform 200ms cubic-bezier(0.16,1,0.3,1);
   }
-  .hcl-faq__a code {
-    font-family: var(--font-mono, monospace); font-size: 11px;
-    background: var(--hc-bg-subtle); border: 1px solid var(--hc-border);
-    border-radius: 3px; padding: 1px 5px;
+  details[open] .lp-chevron { transform: rotate(180deg); }
+  .lp-faq__a {
+    padding-bottom: 20px; font-size: 14px; color: var(--lp-text-muted);
+    line-height: 1.7; max-width: 680px;
+  }
+  .lp-code {
+    font-family: var(--font-mono, monospace); font-size: 12px;
+    background: var(--lp-accent-subtle); border: 1px solid var(--lp-accent-muted);
+    border-radius: 4px; padding: 1px 5px; color: var(--lp-accent);
   }
 
-  /* CTA strip */
-  .hcl-cta-strip { padding: 64px 0; border-bottom: 1px solid var(--hc-border-subtle); text-align: left; }
-  .hcl-cta-strip__heading {
-    font-family: var(--font-serif, Georgia, serif);
-    font-size: 30px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 12px; color: var(--hc-text);
+  /* ── CTA strip ── */
+  .lp-cta-strip {
+    padding: 72px 0;
+    background: var(--lp-accent);
+    position: relative; overflow: hidden;
   }
-  .hcl-cta-strip__sub { font-size: 15px; color: var(--hc-text-muted); margin-bottom: 32px; }
-
-  /* Footer */
-  .hcl-footer { padding: 32px 0; }
-  .hcl-footer__inner {
+  .lp-cta-strip::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  [data-theme="dark"] .lp-cta-strip {
+    background: var(--lp-bg-tinted);
+    border-top: 1px solid var(--lp-border);
+  }
+  [data-theme="dark"] .lp-cta-strip::before { display: none; }
+  .lp-cta-strip__inner {
     display: flex; align-items: center; justify-content: space-between;
-    border-top: 1px solid var(--hc-border-subtle); padding-top: 32px;
+    gap: 32px; flex-wrap: wrap; position: relative; z-index: 1;
   }
-  .hcl-footer__copy { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--hc-text-subtle); }
-  .hcl-footer__links { display: flex; gap: 20px; }
-  .hcl-footer__link {
-    font-family: var(--font-mono, monospace); font-size: 11px; color: var(--hc-text-subtle);
-    transition: color 120ms;
+  .lp-cta-strip__heading {
+    font-size: clamp(22px, 3vw, 30px); font-weight: 700;
+    letter-spacing: -0.025em; color: #fff; margin-bottom: 8px;
   }
-  .hcl-footer__link:hover { color: var(--hc-text); }
+  [data-theme="dark"] .lp-cta-strip__heading { color: var(--lp-text); }
+  .lp-cta-strip__sub { font-size: 15px; color: rgba(255,255,255,0.72); }
+  [data-theme="dark"] .lp-cta-strip__sub { color: var(--lp-text-muted); }
+  [data-theme="dark"] .lp-btn--cta-strip {
+    background: var(--lp-accent); color: #fff; border-color: var(--lp-accent);
+  }
+  [data-theme="dark"] .lp-btn--cta-strip:hover {
+    background: var(--lp-accent-hover); border-color: var(--lp-accent-hover);
+  }
 
-  /* Responsive — mobile first ≥320px, breakpoint at 680px and 1024px */
+  /* ── Footer ── */
+  .lp-footer { padding: 32px 0; }
+  .lp-footer__inner {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--lp-border); padding-top: 32px;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .lp-footer__copy {
+    font-family: var(--font-mono, monospace); font-size: 12px;
+    color: var(--lp-text-subtle);
+  }
+  .lp-footer__links { display: flex; gap: 20px; }
+  .lp-footer__link {
+    font-family: var(--font-mono, monospace); font-size: 12px;
+    color: var(--lp-text-subtle); transition: color 120ms;
+  }
+  .lp-footer__link:hover { color: var(--lp-text); }
+
+  /* ── Responsive ── */
   @media (max-width: 1023px) {
-    .hcl-step-row { grid-template-columns: 1fr; gap: 12px; }
-    .hcl-step-annotation { border-left: none; padding-left: 0; border-top: 1px dashed var(--hc-border); padding-top: 12px; }
+    .lp-hero__grid { grid-template-columns: 1fr; gap: 40px; }
+    .lp-hero::after { display: none; }
   }
 
-  @media (max-width: 680px) {
-    .hcl-footer__inner { flex-direction: column; gap: 16px; text-align: center; }
-    .hcl-headline { font-size: 32px; }
-    .hcl-preview__filter-row { flex-direction: column; align-items: flex-start; }
-    .hcl-hero { padding: 64px 0 48px; }
-    .hcl-cta-arrow { display: none; }
-    .hcl-pullquote__head { font-size: 15px; }
-    .hcl-pullquote__body { font-size: 13px; }
+  @media (max-width: 767px) {
+    .lp-steps { grid-template-columns: 1fr; gap: 14px; }
+    .lp-features { grid-template-columns: 1fr; gap: 22px; }
+    .lp-cta-strip__inner { flex-direction: column; align-items: flex-start; }
+    .lp-headline { font-size: 30px; }
+    .lp-section { padding: 56px 0; }
+  }
+
+  @media (max-width: 480px) {
+    .lp-hero { padding: 56px 0 48px; }
+    .lp-footer__inner { flex-direction: column; text-align: center; }
+    .lp-footer__links { justify-content: center; }
+    .lp-preview__filter-row { flex-direction: column; align-items: flex-start; }
   }
 `
